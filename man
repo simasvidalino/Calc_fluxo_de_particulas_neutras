@@ -1,0 +1,23 @@
+#include <iostream>
+#include <fstream>         //trabalhar com arquivo
+#include <ctime>           //para medir o tempo de execução
+#include <cmath>           //para usar a função pow
+#include <sstream>         //converter string para double, usar ostringstream para o titulo de saída
+#include <vector>          //para acessar funcoes como eraser e shrink_to_fit() no vector
+#include <iomanip>         //para mostrar maior numero de casas decimais na tela
+#include "Estruturas.h"    //struct para guardar variáveis
+#include "Legendre.h"      //Para usar polinomio de legendre
+#include "quadrule.hpp"    //dados de quadraturas de Gauss-Legendre
+#include "Const_matriz.h"  //construir dados de entrada
+#include "metodoDD.h"      //método Diamond Difference
+
+using namespace std;
+
+int main()
+{
+    construir_dados("Ricardo_Barros2.txt", valor);
+    DD();
+
+    return 0;
+}
+
