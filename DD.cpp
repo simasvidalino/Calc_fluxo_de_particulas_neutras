@@ -85,8 +85,8 @@ if(valor.tipo_cd==2)
 for(int g=0;g<valor.G;g++){
     ni = valor.NODOSX;
     for(int r=(valor.n_R-1);r>=0;r--){
-       for(int n=valor.n_nodos[r]-1;n>=0;n--){//n muda conforme mudamos de regiao, ou seja, cada regiao tem uma quantidade de nodos
-           for(int o=0;o<(valor.n/2);o++){//a varredura pela esquerda contempla a metadade das direções mi
+       for(int n=valor.n_nodos[r]-1;n>=0;n--){
+           for(int o=0;o<(valor.n/2);o++){
              Q = valor.fonte_g[g][r];
              a = 0.5*valor.s_t[g][valor.Map_R[r]-1];
              b = -valor.mi[o]/valor.PASSO[r];
