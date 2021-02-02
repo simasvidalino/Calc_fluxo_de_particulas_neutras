@@ -15,7 +15,7 @@ using namespace std;
 
 int main()
 {
-    construir_dados("Ricardo_Barros2.txt", valor);
+    construir_dados("Arquivo_de_entrada.txt", valor);
     DD();
 
     return 0;
