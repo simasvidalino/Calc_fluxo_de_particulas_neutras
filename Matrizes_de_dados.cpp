@@ -9,7 +9,7 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     string k;
     ifstream dados_txt;
     vector <double> vetor;
-    dados_txt.open(arquivotxt.c_str()); // c_str transforma string para char* ???? perguntar
+    dados_txt.open(arquivotxt.c_str()); 
 
 
     if(!dados_txt){
@@ -17,13 +17,13 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     }else{
 
          while(dados_txt){  //lê todo o arquivo
-                     dados_txt >> k; //coloca todos os dados na string k
+                     dados_txt >> k; 
 
                      if(k[0] == '/'){ //pega somente linhas com texto (primeira palavra)
-                       dados_txt.ignore(1000,'\n');    //ignora o resto das palavras da frases para não entrar no else
+                       dados_txt.ignore(1000,'\n');    
                       }else{
-                         istringstream(k) >> j; //transforma string em double
-                         vetor.push_back(j); //cola os dados tipo doble em um vetor dinâmico
+                         istringstream(k) >> j; 
+                         vetor.push_back(j); 
                        }
                   }
           }
@@ -36,8 +36,8 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
 
 *********************************************************************************************************/
 
- vetor.erase(vetor.begin(),vetor.begin()+9); //estou apagando os dados que não serão levados em consideração
- static int i=0; //todos os valores de i entrarao no mesmo endereço de memória
+ vetor.erase(vetor.begin(),vetor.begin()+9); 
+ static int i=0; 
 
 //Ordem da Quadratura GL
 valor.n = vetor[i];
@@ -89,8 +89,8 @@ valor.Map_R = new short int [valor.n_R];
         i++;
     }
 
-   vetor.erase(vetor.begin(),vetor.begin()+i); //estou liberando valores do meu vetor com o iterator
-   vetor.shrink_to_fit() ; //vou diminuir a capacidade do meu vetor
+   vetor.erase(vetor.begin(),vetor.begin()+i); 
+   vetor.shrink_to_fit() ; 
 i=0;
 
 /*********************************************************************************************************
@@ -153,9 +153,7 @@ for(int j=0;j<valor.G;j++){
     }
 }
 vetor.clear();
-vetor.shrink_to_fit() ; //para diminuir a capacidade do meu vetor
-
-//cout<<endl<<vetor.capacity();
+vetor.shrink_to_fit() ; 
 
 /*********************************************************************************************************
 
