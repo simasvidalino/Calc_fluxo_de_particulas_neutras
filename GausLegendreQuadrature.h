@@ -1,20 +1,14 @@
-# include <cmath>
-# include <cstdlib>
-# include <cstring>
-# include <ctime>
-# include <iomanip>
-# include <iostream>
+#ifndef GAUSLEGENDREQUADRATURE_H_INCLUDED
+#define GAUSLEGENDREQUADRATURE_H_INCLUDED
 
-using namespace std;
-
-# include "quadrule.hpp"
-
-//****************************************************************************80
-
-
-void legendre_set ( int n, double x[], double w[] )
-
-//****************************************************************************80
+/*#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <iomanip>
+#include <iostream>*/
+#include <iostream>
+//****************************************************************************
 //
 //  Purpose:
 //
@@ -96,6 +90,8 @@ void legendre_set ( int n, double x[], double w[] )
 //
 //    Output, double W[N], the weights.
 //
+
+void legendre_set( int n, double x[], double w[] )
 {
   if ( n == 1 )
   {
@@ -4077,11 +4073,14 @@ void legendre_set ( int n, double x[], double w[] )
   }
   else
   {
-    cerr << "\n";
-    cerr << "LEGENDRE_SET - Fatal error!\n";
-    cerr << "  Illegal value of N = " << n << "\n";
-    cerr << "  Legal values are 1:33, 63/64/65, 127/128/129, 255/256/257\n";
+    std::cerr << "\n";
+    std::cerr << "LEGENDRE_SET - Fatal error!\n";
+    std::cerr << "  Illegal value of N = " << n << "\n";
+    std::cerr << "  Legal values are 1:33, 63/64/65, 127/128/129, 255/256/257\n";
     exit ( 1 );
   }
   return;
 }
+
+
+#endif // GAUSLEGENDREQUADRATURE_H_INCLUDED

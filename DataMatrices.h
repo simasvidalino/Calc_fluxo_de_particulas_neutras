@@ -1,5 +1,19 @@
-#ifndef CONST_MATRIZ_H_INCLUDED
-#define CONST_MATRIZ_H_INCLUDED
+#ifndef DATAMATRICES_H_INCLUDED
+#define DATAMATRICES_H_INCLUDED
+
+#include <iostream>
+#include <string>
+#include <fstream>         //trabalhar com arquivo
+#include <ctime>           //para medir o tempo de execução
+#include <cmath>           //para usar a função pow
+#include <sstream>         //converter string para double, usar ostringstream para o titulo de saída
+#include <vector>          //para acessar funcoes como eraser e shrink_to_fit() no vector
+#include <iomanip>         //para mostrar maior numero de casas decimais na tela
+#include "DataMatrices.h" //struct para guardar variáveis
+#include "LegendrePolynomial.h" //Para usar polinomio de legendre
+#include "GausLegendreQuadrature.h"    //dados de quadraturas de Gauss-Legendre
+#include "DataMatrices.h" //construir dados de entrada
+#include "VariablesUsed.h"
 
 using namespace std;
 
@@ -9,21 +23,21 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     string k;
     ifstream dados_txt;
     vector <double> vetor;
-    dados_txt.open(arquivotxt.c_str()); 
+    dados_txt.open(arquivotxt.c_str());
 
 
     if(!dados_txt){
             cout<<"\nFALHA NA ABERTURA DO ARQUIVO...\n";
     }else{
 
-         while(dados_txt){  //lÃª todo o arquivo
-                     dados_txt >> k; 
+         while(dados_txt){  //lê todo o arquivo
+                     dados_txt >> k;
 
                      if(k[0] == '/'){ //pega somente linhas com texto (primeira palavra)
-                       dados_txt.ignore(1000,'\n');    
+                       dados_txt.ignore(1000,'\n');
                       }else{
-                         istringstream(k) >> j; 
-                         vetor.push_back(j); 
+                         istringstream(k) >> j;
+                         vetor.push_back(j);
                        }
                   }
           }
@@ -32,12 +46,12 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
 
 /********************************************************************************************************
 
-                           DistribuiÃ§Ã£o de dados em matrizes
+                           Distribuição de dados em matrizes
 
 *********************************************************************************************************/
 
- vetor.erase(vetor.begin(),vetor.begin()+9); 
- static int i=0; 
+ vetor.erase(vetor.begin(),vetor.begin()+9);
+ static int i=0;
 
 //Ordem da Quadratura GL
 valor.n = vetor[i];
@@ -89,8 +103,8 @@ valor.Map_R = new short int [valor.n_R];
         i++;
     }
 
-   vetor.erase(vetor.begin(),vetor.begin()+i); 
-   vetor.shrink_to_fit() ; 
+   vetor.erase(vetor.begin(),vetor.begin()+i);
+   vetor.shrink_to_fit() ;
 i=0;
 
 /*********************************************************************************************************
@@ -153,7 +167,7 @@ for(int j=0;j<valor.G;j++){
     }
 }
 vetor.clear();
-vetor.shrink_to_fit() ; 
+vetor.shrink_to_fit() ;
 
 /*********************************************************************************************************
 
@@ -193,7 +207,7 @@ for(int g=0;g<valor.G;g++){
     }
 
 
-//Matriz com os polinÃ´mios de Legendre
+//Matriz com os polinômios de Legendre
 legendre_set ( valor.n,valor.mi,valor.w);
 valor.Mat_Legendre = new double *[valor.n];
 valor.legendre_n = new double [valor.L+1];
@@ -212,4 +226,4 @@ for(int n=0;n<valor.n;n++){
 
 }
 
-#endif // CONST_MATRIZ_H_INCLUDED
+#endif // DATAMATRICES_H_INCLUDED

@@ -1,5 +1,5 @@
-#ifndef METODODD_H_INCLUDED
-#define METODODD_H_INCLUDED
+#ifndef DDNUMERICALMETHOLD_H_INCLUDED
+#define DDNUMERICALMETHOLD_H_INCLUDED
 
 void DD(){
 
@@ -239,4 +239,5 @@ else{
     saida_dados.close();
 
 }
-#endif // METODODD_H_INCLUDED
+
+#endif // DDNUMERICALMETHOLD_H_INCLUDED

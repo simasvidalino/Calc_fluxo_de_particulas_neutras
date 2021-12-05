@@ -1,3 +1,6 @@
+#ifndef LEGENDREPOLYNOMIAL_H_INCLUDED
+#define LEGENDREPOLYNOMIAL_H_INCLUDED
+
 //==================================================================
 /**
  *  legendre.h -- C++ functions to evaluate Legendre polynomials
@@ -30,16 +33,13 @@
  *
  * History:
  * 29-sep-2005  created
- * Sofreu modifica√ß√£o por Andr√©ia Simas
+ * Changed by AndrÈia Simas
  */
 //==============
 
-#ifndef __LEGENDRE_H__
-#define __LEGENDRE_H__
-
 namespace Legendre
 {
-  inline void Pn(unsigned int n, double x, double *pn) //aqui ser√° constru√≠do o vetor pn
+  inline void Pn(unsigned int n, double x, double *pn) //aqui ser· construÌdo o vetor pn
   {
     if (x == 1.0){
         for (unsigned int l = 0 ; l <= n ; l++){
@@ -70,4 +70,4 @@ namespace Legendre
     }
   }
 }
-#endif
+#endif // LEGENDREPOLYNOMIAL_H_INCLUDED
