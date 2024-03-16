@@ -1,5 +1,4 @@
-#ifndef LEGENDREPOLYNOMIAL_H_INCLUDED
-#define LEGENDREPOLYNOMIAL_H_INCLUDED
+#pragma once
 
 //==================================================================
 /**
@@ -33,13 +32,13 @@
  *
  * History:
  * 29-sep-2005  created
- * Changed by AndrÈia Simas
+ * Changed by Andr√©ia Simas
  */
 //==============
 
 namespace Legendre
 {
-  inline void Pn(unsigned int n, double x, double *pn) //aqui ser· construÌdo o vetor pn
+  inline void Pn(unsigned int n, double x, double *pn) //aqui ser√° constru√≠do o vetor pn
   {
     if (x == 1.0){
         for (unsigned int l = 0 ; l <= n ; l++){
@@ -70,4 +69,3 @@ namespace Legendre
     }
   }
 }
-#endif // LEGENDREPOLYNOMIAL_H_INCLUDED

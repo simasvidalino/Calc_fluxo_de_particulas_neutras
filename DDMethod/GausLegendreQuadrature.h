@@ -1,5 +1,4 @@
-#ifndef GAUSLEGENDREQUADRATURE_H_INCLUDED
-#define GAUSLEGENDREQUADRATURE_H_INCLUDED
+#pragma once
 
 /*#include <cmath>
 #include <cstdlib>
@@ -91,7 +90,7 @@
 //    Output, double W[N], the weights.
 //
 
-void legendre_set( int n, double x[], double w[] )
+inline void legendre_set( int n, double x[], double w[] )
 {
   if ( n == 1 )
   {
@@ -4083,4 +4082,3 @@ void legendre_set( int n, double x[], double w[] )
 }
 
 
-#endif // GAUSLEGENDREQUADRATURE_H_INCLUDED
