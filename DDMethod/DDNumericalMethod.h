@@ -32,16 +32,27 @@ a tolerânicia para o processo parar.
 ************************************************************************************************************************/
 
     double tolerancia;
-    clock_t t1;
     tolerancia = 1/pow(10, valor.ordem_parada);
+
+    //Inicialização do fluxo angular
+    for(int g = 0; g < valor.G; g++)
+    {
+        for(int node = 0; node <= valor.NODOSX; node++)
+        {
+            for(int n = 0; n < valor.n; n++)
+            {
+                valor.FLUXO_ANGULAR[g][node][n] = 0.0;
+            }
+        }
+    }
 
     //Condição de contorno pela esquerda e pela direita
     for(int g = 0; g < valor.G; g++)
     {
-        for(int o = 0; o < valor.n; o++)
+        for(int n = 0; n < valor.n; n++)
         {
-            valor.FLUXO_ANGULAR[g][0][o]            = valor.cceg[g];
-            valor.FLUXO_ANGULAR[g][valor.NODOSX][o] = valor.ccdg[g];
+            valor.FLUXO_ANGULAR[g][0][n]            = valor.cceg[g];
+            valor.FLUXO_ANGULAR[g][valor.NODOSX][n] = valor.ccdg[g];
         }
     }
 
@@ -50,28 +61,35 @@ a tolerânicia para o processo parar.
     {
         for(int indexNode = 0; indexNode <= valor.NODOSX; indexNode++)
         {
-            valor.FLUXO_ESCALAR[g][indexNode] = 0;
+            valor.FLUXO_ESCALAR[g][indexNode] = 0.0;
         }
 
         for(int indexNode = 0; indexNode < valor.NODOSX; indexNode++)
         {
             for(int n = 0; n < valor.n; n++)
             {
-                valor.smgi[g][indexNode][n] = 0;
+                valor.smgi[g][indexNode][n] = 0.0;
             }
         }
     }
 
     int iteracao = 0;
     long double aux;
+    clock_t t1;
 
-    while(iteracao<valor.iteracao)
+    while(iteracao < valor.iteracao)
     {
 
-        int ni;
-        long double fi,Q,a,b,num,den;
+        int ni = 0;
+        long double fi    = 0.0;
+        long double Q     = 0.0;
+        long double a     = 0.0;
+        long double b     = 0.0;
+        long double num   = 0.0;
+        long double den   = 1.0;
+        long double passo = 0.5;
 
-        if(valor.tipo_ce==2)
+        if(valor.tipo_ce == 2)
         {
             for(int g=0;g<valor.G;g++){
                 int a=0;
@@ -83,22 +101,25 @@ a tolerânicia para o processo parar.
         //varredura para a direita mi>0
         for(int g=0;g<valor.G;g++){
             ni = 0;
-            for(int r=0;r<valor.n_R;r++){
+            for(int r=0;r<valor.n_R;r++)
+            {
+                Q     = valor.fonte_g[g][r];
+                a     = 0.5 * valor.s_t[g][valor.Map_R[r] - 1];
+                passo = valor.PASSO[r];
                 for(int n=0;n<(valor.n_nodos[r]);n++)
                 {     //n muda conforme mudamos de regiao, ou seja, cada regiao tem uma quantidade de nodos
                     for(int o=(valor.n/2);o<valor.n;o++)
                     {  //a varredura pela direita contempla a metadade das direções mi
-                        Q = valor.fonte_g[g][r];
-                        a = 0.5 * valor.s_t[g][valor.Map_R[r] - 1];
-                        b = valor.mi[o]/valor.PASSO[r];
+                        b = valor.mi[o]/passo;
                         num = ((b - a) * valor.FLUXO_ANGULAR[g][ni][o]) + Q + valor.smgi[g][ni][o];
                         den = b + a;
                         fi = num/den;
                         valor.FLUXO_ANGULAR[g][ni + 1][o] = fi;
                     }
                     ni++;
-                }}}
-
+                }
+            }
+        }
 
         if(valor.tipo_cd==2)
         {
@@ -112,20 +133,26 @@ a tolerânicia para o processo parar.
         //varredura para a esquerda mi<0
         for(int g=0;g<valor.G;g++){
             ni = valor.NODOSX;
-            for(int r=(valor.n_R-1);r>=0;r--){
-                for(int n=valor.n_nodos[r]-1;n>=0;n--){
+            for(int r=(valor.n_R-1);r>=0;r--)
+            {
+                Q     = valor.fonte_g[g][r];
+                a     = 0.5*valor.s_t[g][valor.Map_R[r]-1];
+                passo = valor.PASSO[r];
+
+                for(int n=valor.n_nodos[r]-1;n>=0;n--)
+                {
                     for(int o=0;o<(valor.n/2);o++)
                     {
-                        Q   = valor.fonte_g[g][r];
-                        a   = 0.5*valor.s_t[g][valor.Map_R[r]-1];
-                        b   = -valor.mi[o]/valor.PASSO[r];
+                        b   = -valor.mi[o]/passo;
                         num = ((b - a)*valor.FLUXO_ANGULAR[g][ni][o]) + Q + valor.smgi[g][ni - 1][o];
                         den = b + a;
                         fi  = num/den;
                         valor.FLUXO_ANGULAR[g][ni - 1][o] = fi;
                     }
                     ni--;
-                }}}
+                }
+            }
+        }
 
         //fluxo escalar
         long double somatorio1;
@@ -215,79 +242,6 @@ for(int g=0;g<valor.G;g++){
 
     t1 = clock(); //medição do tempo de execução
 
-
-    /*******************************************************************************************************************************************
-
-                                    Saída de dados
-
-********************************************************************************************************************************************/
-
-    ofstream saida_dados;
-    string titulo;
-    ostringstream auxiliar; //recurso para combinar dados numéricos com dados não-numéricos em uma string para fazer o título
-    auxiliar<<"Average_Scalar_Flux_R"<<valor.n_R<<"_G"<<valor.G<<"_L"
-           <<valor.L<<"_N"<<valor.n<<"_Nod"<<valor.NODOSX<<".txt";
-    titulo = auxiliar.str();
-
-    saida_dados.open(titulo);
-    saida_dados<<"**********************************************************************************************************************************************************************************************************************************************************************************************************\n";
-    saida_dados<<"Final average scalar flux\t\titer: "<<iteracao<<"\t\tTime(s): "<<(float)t1/CLOCKS_PER_SEC <<endl;
-    saida_dados<<"**********************************************************************************************************************************************************************************************************************************************************************************************************\nGrupo\t\t\t";
-
-
-    valor.TAM_TOTAL = 0; //comprimento total de x
-    /*
-if(valor.n_R==1){
-      int x = 0;
-      for(int i=0;i<=2;i++){
-         saida_dados<<x<<" cm\t\t\t\t";
-         x = x + valor.TAM[0]/2;
-      }
-      for(int g=0;g<valor.G;g++){
-         saida_dados<<"\n"<<g+1;
-         int nod = 0;
-         for(int i=0;i<=2;i++){
-            saida_dados<<"\t\t\t"<<scientific<<setprecision(6)<<valor.FLUXO_ESCALAR[g][nod];
-            nod = nod + valor.n_nodos[0]/2;
-      }}
-}
-else{
-    valor.TAM_TOTAL = 0;
-    for(int r=0;r<=valor.n_R;r++){
-       saida_dados<<valor.TAM_TOTAL<<" cm\t\t\t\t";
-       valor.TAM_TOTAL = valor.TAM_TOTAL+valor.TAM[r];
-    }
-    for(int g=0;g<valor.G;g++){
-         saida_dados<<"\n"<<g+1;
-         int nod = 0;
-         for(int r=0;r<=valor.n_R;r++){
-            saida_dados<<"\t\t\t"<<scientific<<setprecision(6)<<valor.FLUXO_ESCALAR[g][nod];
-            nod = nod + valor.n_nodos[r];
-      }}
-
-}*/
-    for(int r=0;r<=valor.n_R;r++)
-    {
-        valor.TAM_TOTAL = valor.TAM_TOTAL+valor.TAM[r];
-    }
-    double t=0;
-    int i=0;
-    while(t<=valor.TAM_TOTAL)
-    {
-        saida_dados<<t<<" cm\t\t\t\t";
-        t = t + valor.periodicidade;
-        i++;
-    }
-
-    for(int g=0; g<valor.G;g++)
-    {
-        saida_dados<<"\n"<<g+1;
-        int nod = 0;
-        for(int n=0;n<i;n++){
-            saida_dados<<"\t\t\t"<<scientific<<setprecision(6)<<valor.FLUXO_ESCALAR[g][nod];
-            nod = nod + (valor.NODOSX*valor.periodicidade)/valor.TAM_TOTAL;
-        }
-    }
-    saida_dados.close();
-
+    valor.iteracaoFinal = iteracao;
+    valor.tempoFinalDeProcessamento = (float)t1/CLOCKS_PER_SEC;
 }
