@@ -72,13 +72,14 @@ struct dados_entrada
 ****************************************************************************************/
     double *w, *mi,*TAM,*cceg,*ccdg;
     long double **s_t;
-    double **fonte_g,**c_c;
+    double **fonte_g;
     long double ****s_s;
-    short int n,L,G,n_R,n_Z,tipo_ce,tipo_cd, ordem_parada;
-    double periodicidade;
+    short int n = 0, L = 0, G = 0, n_R = 0, n_Z = 0, tipo_ce = 0, tipo_cd = 0, ordem_parada = 0;
+    double periodicidade = 0.0;
     short int *n_nodos,*Map_R;
-    int iteracao;
-
+    int iteracao = 0;
+    int iteracaoFinal = 0;
+    float tempoFinalDeProcessamento = 0.0;
 
     /* Dados calculados
 *******************************************************************************************
@@ -100,17 +101,15 @@ struct dados_entrada
     double*legendre_n;
     int *CONTX;
     long double ***FLUXO_ANGULAR;
+    long double ***FLUXO_ANGULAR_DIREITA;
+    long double ***FLUXO_ANGULAR_ESQUERDA;
+
     long double **FLUXO_ESCALAR;
     long double***smgi;
     int NODOSX;
     double **Mat_Legendre;
 
     std::unique_ptr<CalculatedData> calculatedData;
-
-    //    std::vector<std::vector<long double>> s_ab;
-    //    std::vector<std::vector<long double>> s_scatt;
-    //    std::vector<long double> absorptionRate;
-    //    std::vector<std::vector<long double>> averageNeutronFluxPerRegion;
 
     ~dados_entrada() {
 
@@ -148,6 +147,7 @@ struct dados_entrada
             safeDelete(s_s);
         }
 
+
         // Desalocar memória para s_t
         if (s_t != nullptr) {
             for (int j = 0; j < G; ++j) {
@@ -164,16 +164,52 @@ struct dados_entrada
             safeDelete(fonte_g);
         }
 
+        // Desalocar memória para Condição de Contorno
+        if (fonte_g != nullptr) {
+            for (int j = 0; j < G; ++j) {
+                safeDelete(fonte_g[j]);
+            }
+            safeDelete(fonte_g);
+        }
+
         // Desalocar memória para FLUXO_ANGULAR
-        //        if (FLUXO_ANGULAR != nullptr) {
-        //            for (int g = 0; g < G; ++g) {
-        //                for (int o = 0; o < NODOSX; ++o) {
-        //                    safeDelete(FLUXO_ANGULAR[g][o]);
-        //                }
-        //                safeDelete(FLUXO_ANGULAR[g]);
-        //            }
-        //            safeDelete(FLUXO_ANGULAR);
-        //        }
+        if (FLUXO_ANGULAR != nullptr) {
+            for (int g = 0; g < G; ++g) {
+                for (int o = 0; o <= NODOSX; ++o) {
+                    safeDelete(FLUXO_ANGULAR[g][o]);
+                    safeDelete(FLUXO_ANGULAR_DIREITA[g][o]);
+                    safeDelete(FLUXO_ANGULAR_ESQUERDA[g][o]);
+                }
+                safeDelete(FLUXO_ANGULAR[g]);
+                safeDelete(FLUXO_ANGULAR_ESQUERDA[g]);
+                safeDelete(FLUXO_ANGULAR_DIREITA[g]);
+            }
+
+            safeDelete(FLUXO_ANGULAR);
+            safeDelete(FLUXO_ANGULAR_DIREITA);
+            safeDelete(FLUXO_ANGULAR_ESQUERDA);
+        }
+
+        if (FLUXO_ANGULAR_DIREITA != nullptr) {
+            for (int g = 0; g < G; ++g) {
+                for (int o = 0; o <= NODOSX; ++o) {
+                    safeDelete(FLUXO_ANGULAR_DIREITA);
+                }
+                safeDelete(FLUXO_ANGULAR_DIREITA[g]);
+            }
+
+            safeDelete(FLUXO_ANGULAR_DIREITA);
+        }
+
+        if (FLUXO_ANGULAR_ESQUERDA != nullptr) {
+            for (int g = 0; g < G; ++g) {
+                for (int o = 0; o <= NODOSX; ++o) {
+                    safeDelete(FLUXO_ANGULAR_ESQUERDA);
+                }
+                safeDelete(FLUXO_ANGULAR_ESQUERDA[g]);
+            }
+            safeDelete(FLUXO_ANGULAR_ESQUERDA);
+        }
 
         // Desalocar memória para FLUXO_ESCALAR
         if (FLUXO_ESCALAR != nullptr) {

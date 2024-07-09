@@ -245,3 +245,26 @@ for(int g=0;g<valor.G;g++){
     valor.iteracaoFinal = iteracao;
     valor.tempoFinalDeProcessamento = (float)t1/CLOCKS_PER_SEC;
 }
+
+class DDMethod
+{
+
+public:
+    static DDMethod *getInstance();
+    void destroyInstance();
+
+    void run(dados_entrada &valor);
+
+protected:
+    virtual void leftScan();
+    virtual void rightScan();
+    virtual void initVariables();
+    virtual void updateAngularFluxMatrix();
+    virtual void updateAngularFluxMatrixLeft();
+    virtual void updateAngularFluxMatrixRight();
+
+private:
+    static DDMethod* myPointer;
+
+    dados_entrada* values;
+};
