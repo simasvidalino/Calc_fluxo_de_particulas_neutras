@@ -111,7 +111,8 @@ struct dados_entrada
 
     std::unique_ptr<CalculatedData> calculatedData;
 
-    ~dados_entrada() {
+    ~dados_entrada()
+    {
 
         std::cout<<"Call delete matrices"<<std::flush;
 
@@ -134,7 +135,8 @@ struct dados_entrada
         safeDelete(CONTX);
 
         // Desalocar memória para s_s
-        if (s_s != nullptr) {
+        if (s_s != nullptr)
+        {
             for (int j = 0; j < G; ++j) {
                 for (int k = 0; k < G; ++k) {
                     for (int l = 0; l < n_Z; ++l) {
@@ -149,8 +151,10 @@ struct dados_entrada
 
 
         // Desalocar memória para s_t
-        if (s_t != nullptr) {
-            for (int j = 0; j < G; ++j) {
+        if (s_t != nullptr)
+        {
+            for (int j = 0; j < G; ++j)
+            {
                 safeDelete(s_t[j]);
             }
             safeDelete(s_t);
@@ -158,24 +162,29 @@ struct dados_entrada
 
         // Desalocar memória para fonte_g
         if (fonte_g != nullptr) {
-            for (int j = 0; j < G; ++j) {
+            for (int j = 0; j < G; ++j)
+            {
                 safeDelete(fonte_g[j]);
             }
             safeDelete(fonte_g);
         }
 
         // Desalocar memória para Condição de Contorno
-        if (fonte_g != nullptr) {
-            for (int j = 0; j < G; ++j) {
+        if (fonte_g != nullptr)
+        {
+            for (int j = 0; j < G; ++j)
+            {
                 safeDelete(fonte_g[j]);
             }
             safeDelete(fonte_g);
         }
 
         // Desalocar memória para FLUXO_ANGULAR
-        if (FLUXO_ANGULAR != nullptr) {
+        if (FLUXO_ANGULAR != nullptr)
+        {
             for (int g = 0; g < G; ++g) {
-                for (int o = 0; o <= NODOSX; ++o) {
+                for (int o = 0; o <= NODOSX; ++o)
+                {
                     safeDelete(FLUXO_ANGULAR[g][o]);
                     safeDelete(FLUXO_ANGULAR_DIREITA[g][o]);
                     safeDelete(FLUXO_ANGULAR_ESQUERDA[g][o]);
@@ -190,9 +199,12 @@ struct dados_entrada
             safeDelete(FLUXO_ANGULAR_ESQUERDA);
         }
 
-        if (FLUXO_ANGULAR_DIREITA != nullptr) {
+        if (FLUXO_ANGULAR_DIREITA != nullptr)
+        {
             for (int g = 0; g < G; ++g) {
-                for (int o = 0; o <= NODOSX; ++o) {
+                for (int o = 0; o <= NODOSX; ++o)
+                {
+
                     safeDelete(FLUXO_ANGULAR_DIREITA);
                 }
                 safeDelete(FLUXO_ANGULAR_DIREITA[g]);
