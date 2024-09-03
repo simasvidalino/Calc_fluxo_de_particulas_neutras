@@ -109,8 +109,6 @@ struct dados_entrada
     int NODOSX;
     double **Mat_Legendre;
 
-    std::unique_ptr<CalculatedData> calculatedData;
-
     ~dados_entrada()
     {
 
