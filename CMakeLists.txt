@@ -5,30 +5,41 @@ project(DDMethod LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Listt of headers
-set(HEADERS
-    DDNumericalMethod.h
-    GausLegendreQuadrature.h
-    LegendrePolynomial.h
-    VariablesUsed.h
-)
+# Incluir o módulo GNUInstallDirs
+include(GNUInstallDirs)
 
-# List of cpps
+# Lista de fontes para a biblioteca
 set(SOURCES
     DDNumericalMethod.cpp
 )
 
-# Create a shared library (.so)
-add_library(DDMethod SHARED ${HEADERS} ${SOURCES})
+# Lista de cabeçalhos
+set(HEADERS
+    DDNumericalMethod.h
+    GausLegendreQuadrature.h
+    LegendrePolynomial.h
+    BuildMatricesWIthTxt.h
+    VariablesUsed.h
+)
 
-# Add includ directories
+# Crie a biblioteca compartilhada (.so)
+add_library(DDMethod SHARED ${SOURCES} ${HEADERS})
+
+# Inclua os diretórios de cabeçalho
 target_include_directories(DDMethod
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-# Install library
+# Instale a biblioteca e os cabeçalhos
 install(TARGETS DDMethod
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Crie o executável de teste
+add_executable(DDMethodTest main.cpp)
+
+# Link o executável com a biblioteca DDMethod
+target_link_libraries(DDMethodTest PRIVATE DDMethod)

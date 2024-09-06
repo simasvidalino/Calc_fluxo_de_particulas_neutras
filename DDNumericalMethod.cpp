@@ -3,6 +3,13 @@
 #include <thread>
 #include <mutex>
 #include <iostream>
+#include <string>
+#include <fstream>         //trabalhar com arquivo
+#include <ctime>           //para medir o tempo de execução
+#include <cmath>           //para usar a função pow
+#include <sstream>         //converter string para double, usar ostringstream para o titulo de saída
+#include <iomanip>         //para mostrar maior numero de casas decimais na tela
+
 
 std::mutex mtxl;
 std::mutex mtxr;
@@ -172,8 +179,7 @@ a tolerânicia para o processo parar.
     long double aux;
     clock_t t1;
 
-    std::cout<<"DDMethod::runDDMethodWithOneThread"<<valor.iteracao<<std::endl;
-
+    std::cout<<"DDMethod in one thread"<<valor.iteracao<<std::endl;
 
     while(iteracao < valor.iteracao)
     {
@@ -290,12 +296,12 @@ a tolerânicia para o processo parar.
             }
         }
 
-//         cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
-// for(int g=0;g<valor.G;g++){
-//          cout<<" Grupo "<<valor.G<<"\n\n";
-//     for(int n=0;n<=valor.NODOSX;n++){
-//     cout<<" nodo "<<n<< "fluxo "<<valor.FLUXO_ESCALAR[g][n]<<endl;
-//     }}
+        cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
+        for(int g=0;g<valor.G;g++){
+            cout<<" Grupo "<<valor.G<<"\n\n";
+            for(int n=0;n<=valor.NODOSX;n++){
+                cout<<" nodo "<<n<< "fluxo "<<valor.FLUXO_ESCALAR[g][n]<<endl;
+            }}
 
         std::ofstream logFile;
 
@@ -365,6 +371,69 @@ a tolerânicia para o processo parar.
 
     valor.iteracaoFinal = iteracao;
     valor.tempoFinalDeProcessamento = (float)t1/CLOCKS_PER_SEC;
+
+    saveTxtFile(valor);
+}
+
+void DDMethod::saveTxtFile(dados_entrada &valor)
+{
+    ofstream saida_dados;
+    string titulo;
+    ostringstream auxiliar;
+
+    // Gera o nome do arquivo baseado nos parâmetros
+    auxiliar << "Saida_Dados_R" << valor.n_R << "_G" << valor.G << "_L" << valor.L << "_N" << valor.n << "_Nod" << valor.NODOSX << ".txt";
+    titulo = auxiliar.str();
+
+    // Abre o arquivo para escrita
+    saida_dados.open(titulo);
+
+    // Cabeçalho do arquivo
+    saida_dados << string(160, '*') << endl;
+    saida_dados << setw(90) << "Saída de dados" << endl;
+    saida_dados << string(160, '*') << endl;
+
+    // Informações gerais sobre o processamento
+    saida_dados << "Número de iter:\t\t" << valor.iteracaoFinal << endl;
+    saida_dados << "Tempo(s):\t\t" << valor.tempoFinalDeProcessamento / CLOCKS_PER_SEC << endl; // Converte o tempo para segundos
+    saida_dados << string(160, '_') << endl;
+    saida_dados << string(160, '*') << endl;
+
+    // Título da seção de fluxo angular final
+    saida_dados << "Fluxo angular final\t\titer: " << valor.iteracaoFinal << endl;
+    saida_dados << string(160, '*') << endl;
+
+    // Cabeçalhos da tabela de resultados
+    saida_dados << "Grupo\t\t";
+    valor.TAM_TOTAL = 0;
+
+    // Calcula o comprimento total e imprime a primeira linha de distâncias
+    for (int r = 0; r <= valor.n_R; r++) {
+        valor.TAM_TOTAL += valor.TAM[r];
+    }
+
+    double t = 0;
+    while (t <= valor.TAM_TOTAL) {
+        saida_dados << setw(15)  << t << "cm";
+        t += valor.periodicidade;
+    }
+    saida_dados << endl;
+
+    saida_dados << string(160, '*') << endl;
+
+    // Escrita dos fluxos escalares para cada grupo
+    for (int g = 0; g < valor.G; g++) {
+        saida_dados << g + 1 << "\t\t"; // Coluna do grupo
+        int nod = 0;
+        for (double t = 0; t <= valor.TAM_TOTAL; t += valor.periodicidade)
+        {
+            saida_dados << setw(15) << scientific << setprecision(6) << valor.FLUXO_ESCALAR[g][nod];
+            nod += (valor.NODOSX * valor.periodicidade) / valor.TAM_TOTAL; // Avança para o próximo nó
+        }
+        saida_dados << endl;
+    }
+
+    saida_dados.close();
 }
 
 void DDMethod::leftScan()
@@ -386,7 +455,7 @@ void DDMethod::leftScan()
             int a=0;
             for(int o=0;o<values->n/2;o++){
                 values->FLUXO_ANGULAR_ESQUERDA[g][values->NODOSX][o] =
-                        values->FLUXO_ANGULAR[g][values->NODOSX][a] ;
+                    values->FLUXO_ANGULAR[g][values->NODOSX][a] ;
                 a++;
             }}}
 
@@ -488,8 +557,6 @@ void DDMethod::initVariables()
             }
         }
     }
-
-    std::cout<<"values->NODOSX"<<values->NODOSX<<std::endl;
 
     //Condição de contorno pela esquerda e pela direita
     for(int g = 0; g < values->G; g++)
