@@ -81,14 +81,14 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
 
     //Tamanho de cada Regiao
     valor.TAM = new double [valor.n_R];
-    for(int j=0;j<valor.n_R;j++){
+    for (int j=0;j<valor.n_R;j++){
         valor.TAM[j]=vetor[i];
         i++;
     }
 
     //Nodos por Regiao
     valor.n_nodos = new short int [valor.n_R];
-    for(int j=0;j<valor.n_R;j++){
+    for (int j=0;j<valor.n_R;j++){
         valor.n_nodos[j]=vetor[i];
         i++;
     }
@@ -99,7 +99,7 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
 
     //Mapeamento
     valor.Map_R = new short int [valor.n_R];
-    for(int j=0;j<valor.n_R;j++){
+    for (int j=0;j<valor.n_R;j++){
         valor.Map_R[j] = vetor[i];
         i++;
     }
@@ -118,29 +118,29 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     valor.s_t = new long double*[valor.G];      //Sigma total
     valor.s_s = new long double***[valor.G];    //Sigma Espalhamento
 
-    for(int j=0;j<valor.G;j++){
+    for (int j=0;j<valor.G;j++){
         valor.fonte_g[j] = new double [valor.n_R];
         valor.s_s[j] = new long double**[valor.G];
         valor.s_t[j] = new long double[valor.n_Z];
 
-        for(int k=0;k<valor.G;k++){
+        for (int k=0;k<valor.G;k++){
             valor.s_s[j][k] = new long double *[valor.n_Z];
 
-            for(int l=0;l<valor.n_Z;l++){
+            for (int l=0;l<valor.n_Z;l++){
                 valor.s_s[j][k][l] = new long double [valor.L+1];}
         }
     }
     /**********************************************************************************************************/
 
     //Sigma total e Sigma de espalhamento
-    for(int h=0;h<valor.n_Z;h++){
-        for(int j=0;j<valor.G;j++){
+    for (int h=0;h<valor.n_Z;h++){
+        for (int j=0;j<valor.G;j++){
             valor.s_t[j][h] = vetor[i];
             i++;
         }
-        for(int k=0;k<valor.L+1;k++){
-            for(int m=0;m<valor.G;m++){
-                for(int n=0;n<valor.G;n++){
+        for (int k=0;k<valor.L+1;k++){
+            for (int m=0;m<valor.G;m++){
+                for (int n=0;n<valor.G;n++){
                     valor.s_s[m][n][h][k] = vetor[i];
                     i++;
                 }
@@ -153,7 +153,7 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     valor.cceg = new double [valor.G];
     valor.ccdg = new double [valor.G];
 
-    for(int j=0;j<valor.G;j++){
+    for (int j=0;j<valor.G;j++){
         valor.cceg[j] = vetor[i];
         i++;
         valor.ccdg[j] = vetor[i];
@@ -161,8 +161,8 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     }
 
     //Fonte Fisica
-    for(int j=0;j<valor.G;j++){
-        for(int k=0;k<valor.n_R;k++){
+    for (int j=0;j<valor.G;j++){
+        for (int k=0;k<valor.n_R;k++){
             valor.fonte_g[j][k]=vetor[i];
             i++;
         }
@@ -180,7 +180,7 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     valor.TAM_TOTAL = 0; //comprimento total de x
     valor.NODOSX=0; // numero total de nodos por regiao
 
-    for(int j=0;j<valor.n_R;j++){
+    for (int j=0;j<valor.n_R;j++){
         valor.CONTX[j] = valor.NODOSX+valor.n_nodos[j];
         valor.PASSO[j] = valor.TAM[j]/valor.n_nodos[j];
         valor.NODOSX = valor.CONTX[j];
@@ -197,7 +197,7 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     valor.FLUXO_ANGULAR_DIREITA  = new long double**[valor.G];
     valor.FLUXO_ANGULAR_ESQUERDA = new long double**[valor.G];
 
-    for(int g = 0; g < valor.G; g++)
+    for (int g = 0; g < valor.G; g++)
     {
         valor.FLUXO_ANGULAR[g] = new long double*[(valor.NODOSX) + 1];
         valor.smgi[g]          = new long double*[valor.NODOSX      ];
@@ -206,7 +206,7 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
         valor.FLUXO_ANGULAR_DIREITA[g]  = new long double*[(valor.NODOSX) + 1];
         valor.FLUXO_ANGULAR_ESQUERDA[g] = new long double*[(valor.NODOSX) + 1];
 
-        for(int o = 0; o <= valor.NODOSX; o++)
+        for (int o = 0; o <= valor.NODOSX; o++)
         {
             valor.FLUXO_ANGULAR[g][o] = new long double[valor.n];
 
@@ -214,7 +214,7 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
             valor.FLUXO_ANGULAR_ESQUERDA[g][o]  = new long double[valor.n];
         }
 
-        for(int o = 0; o < valor.NODOSX; o++)
+        for (int o = 0; o < valor.NODOSX; o++)
         {
             valor.smgi[g][o] = new long double[valor.n];
         }
@@ -224,20 +224,23 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     //Matriz com os polinômios de Legendre
     legendre_set ( valor.n,valor.mi,valor.w);
     valor.Mat_Legendre = new double *[valor.n];
-    valor.legendre_n = new double [valor.L+1];
-    for(int n=0;n<valor.n;n++){
+    double *legendre_n = new double [valor.L+1];
+
+    for (int n=0;n<valor.n;n++){
         valor.Mat_Legendre[n] = new double [valor.L + 1];
     }
 
     setlocale(LC_ALL,"portuguese");
 
-    for(int n=0;n<valor.n;n++){
-        Legendre::Pn(valor.L,valor.mi[n],valor.legendre_n);
-        for(int l=0;l<valor.L+1;l++){
-            valor.Mat_Legendre[n][l] = valor.legendre_n[l];
+    for (int n=0;n<valor.n;n++){
+        Legendre::Pn(valor.L,valor.mi[n], legendre_n);
+        for (int l=0;l<valor.L+1;l++){
+            valor.Mat_Legendre[n][l] = legendre_n[l];
         }
     }
     i=0;
+
+    delete [] legendre_n;
 }
 
 #endif // DATAMATRICES_H_INCLUDED

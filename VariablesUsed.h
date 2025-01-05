@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+
 struct CalculatedCrossSectionMatrices
 {
     std::vector<std::vector<long double>> absorptionCrossSection;
@@ -32,6 +33,7 @@ struct CalculatedData
 
     std::vector<std::vector<long double>> scalarFlux;
     std::vector<std::vector<long double>> absorptionRate;
+    std::vector<std::vector<std::vector<long double>>> absorptionRatePerNode;
     std::vector<std::vector<long double>> averageNeutronFluxPerRegion;
 
     CalculatedCrossSectionMatrices matrices;
@@ -98,7 +100,6 @@ struct dados_entrada
     long double MODULO;
     double TAM_TOTAL;
     long double *PASSO;
-    double*legendre_n;
     int *CONTX;
     long double ***FLUXO_ANGULAR;
     long double ***FLUXO_ANGULAR_DIREITA;
@@ -131,7 +132,6 @@ struct dados_entrada
         safeDelete(n_nodos);
         safeDelete(Map_R);
         safeDelete(PASSO);
-        safeDelete(legendre_n);
         safeDelete(CONTX);
 
         // Desalocar memória para s_s
