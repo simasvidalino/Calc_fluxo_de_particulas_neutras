@@ -33,7 +33,7 @@ struct CalculatedData
 
     std::vector<std::vector<long double>> scalarFlux;
     std::vector<std::vector<long double>> absorptionRate;
-    std::vector<std::vector<std::vector<long double>>> absorptionRatePerNode;
+    std::vector<std::vector<long double>> absorptionRatePerNode;
     std::vector<std::vector<long double>> averageNeutronFluxPerRegion;
 
     CalculatedCrossSectionMatrices matrices;
