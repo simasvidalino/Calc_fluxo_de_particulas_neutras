@@ -21,6 +21,7 @@ int main()
         {
             construir_dados(path, valor);
             DDMethod::getInstance()->runDDMethodWithOneThread(valor);
+            DDMethod::getInstance()->saveTxtFile(valor);
 
             std::cout << "Deseja calcular novamente? (s/n): ";
             std::cin >> continuar;

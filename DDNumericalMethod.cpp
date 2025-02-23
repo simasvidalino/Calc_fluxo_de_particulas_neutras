@@ -92,12 +92,12 @@ void DDMethod::runDDMethodWithTwoThreads(dados_entrada &valor)
             }
         }
 
-        cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
-        for(int g=0;g<values->G;g++){
-            cout<<" Grupo "<<values->G<<"\n\n";
-            for(int n=0;n<=values->NODOSX;n++){
-                cout<<" nodo "<<n<< "fluxo "<<values->FLUXO_ESCALAR[g][n]<<endl;
-            }}
+        // cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
+        // for(int g=0;g<values->G;g++){
+        //     cout<<" Grupo "<<values->G<<"\n\n";
+        //     for(int n=0;n<=values->NODOSX;n++){
+        //         cout<<" nodo "<<n<< "fluxo "<<values->FLUXO_ESCALAR[g][n]<<endl;
+        //     }}
 
 
         if(aux<tol)
@@ -179,7 +179,7 @@ a tolerânicia para o processo parar.
     long double aux;
     clock_t t1;
 
-    std::cout<<"DDMethod in one thread"<<valor.iteracao<<std::endl;
+    std::cout<<"DDMethod in one thread "<<valor.iteracao<<" Grupo: "<<valor.G<<std::endl;
 
     while(iteracao < valor.iteracao)
     {
@@ -296,23 +296,26 @@ a tolerânicia para o processo parar.
             }
         }
 
-        cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
-        for(int g=0;g<valor.G;g++){
-            cout<<" Grupo "<<valor.G<<"\n\n";
-            for(int n=0;n<=valor.NODOSX;n++){
-                cout<<" nodo "<<n<< "fluxo "<<valor.FLUXO_ESCALAR[g][n]<<endl;
-            }}
+        // cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
+        // for(int g=0;g<valor.G;g++){
+        //     cout<<" Grupo "<<valor.G<<"\n\n";
+        //     for(int n=0;n<=valor.NODOSX;n++){
+        //         cout<<" nodo "<<n<< "fluxo "<<valor.FLUXO_ESCALAR[g][n]<<endl;
+        //     }}
 
         std::ofstream logFile;
 
         logFile.open("logfile.txt", std::ios::app); // Abre o arquivo em modo de adição
+
         if (!logFile.is_open()) {
             std::cerr << "Erro ao abrir o arquivo de log!" << std::endl;
             return;
         }
+
         logFile << "Inicializando variáveis...\n";
 
         logFile << "\n" << aux <<"<"<<tolerancia<< "\n\n\n\n";
+
         for (int g = 0; g < valor.G; g++) {
             logFile << " Grupo " << g << "\n\n";
             for (int n = 0; n <= valor.NODOSX; n++) {
@@ -371,8 +374,6 @@ a tolerânicia para o processo parar.
 
     valor.iteracaoFinal = iteracao;
     valor.tempoFinalDeProcessamento = (float)t1/CLOCKS_PER_SEC;
-
-    saveTxtFile(valor);
 }
 
 void DDMethod::saveTxtFile(dados_entrada &valor)
@@ -425,10 +426,12 @@ void DDMethod::saveTxtFile(dados_entrada &valor)
     for (int g = 0; g < valor.G; g++) {
         saida_dados << g + 1 << "\t\t"; // Coluna do grupo
         int nod = 0;
-        for (double t = 0; t <= valor.TAM_TOTAL; t += valor.periodicidade)
+        int steps = static_cast<int>(valor.TAM_TOTAL / valor.periodicidade);
+
+        for (int i = 0; i <= steps; ++i)
         {
             saida_dados << setw(15) << scientific << setprecision(6) << valor.FLUXO_ESCALAR[g][nod];
-            nod += (valor.NODOSX * valor.periodicidade) / valor.TAM_TOTAL; // Avança para o próximo nó
+            nod += (valor.NODOSX * valor.periodicidade) / valor.TAM_TOTAL;
         }
         saida_dados << endl;
     }

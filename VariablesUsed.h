@@ -4,45 +4,6 @@
 #include <memory>
 #include <vector>
 
-struct CalculatedCrossSectionMatrices
-{
-    std::vector<std::vector<long double>> absorptionCrossSection;
-    std::vector<std::vector<long double>> scatteringCrossSection;
-};
-
-struct CalculatedData
-{
-    /* Calculated data
-    *******************************************************************************************
-    * cumulativeNodesX       -> cumulative nodes per region, for X location reference
-    * stepSize               -> spatial node dimension per region in the X direction
-    * totalLength            -> total length of the X domain
-    * totalNodes             -> total number of nodes in the X domain
-    * angularFluxBefore      -> Neutron flux at each node, energy group, and direction to be calculated (before)
-    * angularFluxAfter       -> Neutron flux at each node, energy group, and direction to be calculated (after)
-    * absorptionCrossSection -> The absorption cross-section in each zone represents the probability of a neutron being
-    *                            absorbed by the material. The absorption cross-section for a given energy group can be
-    *                            calculated by subtracting the scattering cross-section from the total cross-section
-    *                            of that group.
-    * scatteringCrossSection -> Scattering cross-section in each zone represents
-    *                            a measure of the probability of a neutron being deflected from its initial trajectory due to an
-    *                            interaction with an atomic nucleus, without being absorbed by it.
-    * smgi                   ->
-    * regionSize             -> Size of each region
-    *******************************************************************************************/
-
-    std::vector<std::vector<long double>> scalarFlux;
-    std::vector<std::vector<long double>> absorptionRate;
-    std::vector<std::vector<long double>> absorptionRatePerNode;
-    std::vector<std::vector<long double>> averageNeutronFluxPerRegion;
-
-    CalculatedCrossSectionMatrices matrices;
-
-    ~CalculatedData()
-    {
-        std::cout<<"Delete DDResult"<<std::flush;
-    };
-};
 
 struct dados_entrada
 {
@@ -109,8 +70,6 @@ struct dados_entrada
     long double***smgi;
     int NODOSX;
     double **Mat_Legendre;
-
-    std::unique_ptr<CalculatedData> calculatedData;
 
     ~dados_entrada()
     {
