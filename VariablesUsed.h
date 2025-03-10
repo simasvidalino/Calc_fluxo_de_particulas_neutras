@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-
+#include <atomic>
 
 struct dados_entrada
 {
@@ -40,9 +40,13 @@ struct dados_entrada
     short int n = 0, L = 0, G = 0, n_R = 0, n_Z = 0, tipo_ce = 0, tipo_cd = 0, ordem_parada = 0;
     double periodicidade = 0.0;
     short int *n_nodos,*Map_R;
-    int iteracao = 0;
     int iteracaoFinal = 0;
     float tempoFinalDeProcessamento = 0.0;
+
+    std::atomic<int> iteracao;
+
+    dados_entrada() : iteracao(0) {}
+
 
     /* Dados calculados
 *******************************************************************************************
@@ -73,9 +77,6 @@ struct dados_entrada
 
     ~dados_entrada()
     {
-
-        std::cout<<"Call delete matrices"<<std::flush;
-
         auto safeDelete = [](auto& ptr) {
             if (ptr != nullptr) {
                 delete[] ptr;

@@ -179,9 +179,7 @@ a tolerânicia para o processo parar.
     long double aux;
     clock_t t1;
 
-    std::cout<<"DDMethod in one thread "<<valor.iteracao<<" Grupo: "<<valor.G<<std::endl;
-
-    while(iteracao < valor.iteracao)
+    while(iteracao < valor.iteracao.load(std::memory_order_relaxed))
     {
         int ni = 0;
 

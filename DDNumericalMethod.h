@@ -1,7 +1,6 @@
 #pragma once
 
-//#include "LegendrePolynomial.h" //Para usar polinomio de legendre
-//#include "GausLegendreQuadrature.h"    //dados de quadraturas de Gauss-Legendre
+#include <functional>
 #include "VariablesUsed.h"
 using namespace std;
 
