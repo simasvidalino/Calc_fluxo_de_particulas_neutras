@@ -1,11 +1,5 @@
 #pragma once
 
-/*#include <cmath>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <iomanip>
-#include <iostream>*/
 #include <iostream>
 //****************************************************************************
 //

@@ -20,6 +20,8 @@ set(HEADERS
     LegendrePolynomial.h
     BuildMatricesWIthTxt.h
     VariablesUsed.h
+    get_GQ.h
+
 )
 
 # Crie a biblioteca compartilhada (.so)

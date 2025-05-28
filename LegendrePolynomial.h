@@ -38,22 +38,22 @@
 
 namespace Legendre
 {
-  inline void Pn(unsigned int n, double x, double *pn) //aqui será construído o vetor pn
-  {
+inline void Pn(unsigned int n, double x, double *pn) //aqui será construído o vetor pn
+{
     if (x == 1.0){
         for (unsigned int l = 0 ; l <= n ; l++){
-          pn[l] = 1.0 ;
+            pn[l] = 1.0 ;
         }
     }
     if (x == -1.0){
-       for (unsigned int l = 0 ; l <= n ; l++){
-          pn[l] = ((n % 2 == 0) ? 1.0 : -1.0) ;
+        for (unsigned int l = 0 ; l <= n ; l++){
+            pn[l] = ((n % 2 == 0) ? 1.0 : -1.0) ;
         }
     }
 
     if ((x == 0.0) && (n % 2)){
-      for (unsigned int l = 0 ; l <= n ; l++){
-          pn[l] = 0.0 ;
+        for (unsigned int l = 0 ; l <= n ; l++){
+            pn[l] = 0.0 ;
         }
     }
     double pnm1=x ;
@@ -61,11 +61,11 @@ namespace Legendre
     pn[0]=1;
     pn[1]=x;
 
-   for (unsigned int l = 2 ; l <= n ; l++){
-      pn[l] = (((2.0 * (double)l) - 1.0) * x * pnm1 -
-            (((double)l - 1.0) * pnm2)) / (double)l ;
-      pnm2 = pnm1;
-      pnm1 = pn[l];
+    for (unsigned int l = 2 ; l <= n ; l++){
+        pn[l] = (((2.0 * (double)l) - 1.0) * x * pnm1 -
+                 (((double)l - 1.0) * pnm2)) / (double)l ;
+        pnm2 = pnm1;
+        pnm1 = pn[l];
     }
-  }
+}
 }

@@ -171,7 +171,7 @@ a tolerânicia para o processo parar.
     values = &valor;
 
     long double tolerancia;
-    tolerancia = 1/pow(10, valor.ordem_parada);
+    tolerancia = 1 / pow(10, valor.ordem_parada);
 
     initVariables();
 
@@ -179,49 +179,63 @@ a tolerânicia para o processo parar.
     long double aux;
     clock_t t1;
 
-    while(iteracao < valor.iteracao.load(std::memory_order_relaxed))
-    {
-        int ni = 0;
+    // for (int i = 0; i < valor.n; ++i)
+    // {
+    //     std::cout << std::fixed << std::setprecision(15) << "i = " << i << ", mi_hardcoded = " << valor.mi[i]
+    //               << ", w_hardcoded = " << valor.w[i] << std::endl;
+    // }
 
-        long double fi    = 0.0;
-        long double Q     = 0.0;
-        long double a     = 0.0;
-        long double b     = 0.0;
-        long double num   = 0.0;
-        long double den   = 1.0;
-        long double passo = 0.5;
+    while (iteracao < valor.iteracao.load(std::memory_order_relaxed))
+    {
+        int ni                   = 0;
+
+        long double fi           = 0.0;
+        long double Q            = 0.0;
+        long double a            = 0.0;
+        long double b            = 0.0;
+        long double num          = 0.0;
+        long double den          = 1.0;
+        long double passo        = 0.5;
 
         short int stRegionIndice = 0;
 
-        if(valor.tipo_ce == 2)
+        if (valor.tipo_ce == 2)
         {
-            for(int g=0;g<valor.G;g++){
-                int a=0;
-                for(int o=(valor.n/2);o<valor.n;o++){
-                    valor.FLUXO_ANGULAR[g][0][o] = valor.FLUXO_ANGULAR[g][0][a] ;
+            for (int g = 0; g < valor.G; g++)
+            {
+                int a = 0;
+                for (int o = (valor.n / 2); o < valor.n; o++)
+                {
+                    valor.FLUXO_ANGULAR[g][0][o] = valor.FLUXO_ANGULAR[g][0][a];
                     a++;
-                }}}
+                }
+            }
+        }
 
-        //varredura para a direita mi>0
-        for(int g=0;g<valor.G;g++){
+        //varredura para a direita mi > 0
+        // psi(i+1) = [(b - a) * psi(i) + Q + smgi] / (b + a)
+        for (int g = 0; g < valor.G; g++)
+        {
+            // ni representa o índice global do nodo atual na malha 1D. Neste caso, ele é crescente
             ni = 0;
-            for(int r=0;r<valor.n_R;r++)
+            for (int r = 0; r < valor.n_R; r++)
             {
                 stRegionIndice = valor.Map_R[r] - 1;
 
-                Q     = valor.fonte_g[g][r];
-                a     = 0.5 * valor.s_t[g][stRegionIndice];
-                passo = valor.PASSO[r];
+                Q              = valor.fonte_g[g][r];
+                a              = 0.5 * valor.s_t[g][stRegionIndice];
+                passo          = valor.PASSO[r];
 
-                for(int n=0;n<(valor.n_nodos[r]);n++)
-                {     //n muda conforme mudamos de regiao, ou seja, cada regiao tem uma quantidade de nodos
-                    for(int o=(valor.n/2);o<valor.n;o++)
+                for (int n = 0; n < (valor.n_nodos[r]); n++)
+                {
+                    //n muda conforme mudamos de regiao, ou seja, cada regiao tem uma quantidade de nodos
+                    for (int o = (valor.n / 2); o < valor.n; o++)
                     {
                         //a varredura pela direita contempla a metadade das direções mi
-                        b = valor.mi[o]/passo;
+                        b   = valor.mi[o] / passo;
                         num = ((b - a) * valor.FLUXO_ANGULAR[g][ni][o]) + Q + valor.smgi[g][ni][o];
                         den = b + a;
-                        fi = num/den;
+                        fi  = num / den;
                         valor.FLUXO_ANGULAR[g][ni + 1][o] = fi;
                     }
                     ni++;
@@ -229,32 +243,39 @@ a tolerânicia para o processo parar.
             }
         }
 
-        if(valor.tipo_cd==2)
+        if (valor.tipo_cd == 2)
         {
-            for(int g=0;g<valor.G;g++){
-                int a=0;
-                for(int o=0;o<valor.n/2;o++){
-                    valor.FLUXO_ANGULAR[g][valor.NODOSX][o] = valor.FLUXO_ANGULAR[g][valor.NODOSX][a] ;
+            for (int g = 0; g < valor.G; g++)
+            {
+                int a = 0;
+                for (int o = 0; o < valor.n / 2; o++)
+                {
+                    valor.FLUXO_ANGULAR[g][valor.NODOSX][o] = valor.FLUXO_ANGULAR[g][valor.NODOSX][a];
                     a++;
-                }}}
+                }
+            }
+        }
 
-        //varredura para a esquerda mi<0
-        for(int g=0;g<valor.G;g++){
+        //varredura para a esquerda mi < 0
+        //psi(i-1) = [(b - a) * psi(i) + Q + smgi] / (b + a)
+        for (int g = 0; g < valor.G; g++)
+        {
+            // ni representa o índice global do nodo atual na malha 1D. Neste caso, ele é decrescente
             ni = valor.NODOSX;
-            for(int r=(valor.n_R-1);r>=0;r--)
+            for (int r = (valor.n_R - 1); r >= 0; r--)
             {
                 Q     = valor.fonte_g[g][r];
-                a     = 0.5*valor.s_t[g][valor.Map_R[r]-1];
+                a     = 0.5 * valor.s_t[g][valor.Map_R[r] - 1];
                 passo = valor.PASSO[r];
 
-                for(int n=valor.n_nodos[r]-1;n>=0;n--)
+                for (int n = valor.n_nodos[r] - 1; n >= 0; n--)
                 {
-                    for(int o=0;o<(valor.n/2);o++)
+                    for (int o = 0; o < (valor.n / 2); o++)
                     {
-                        b   = -valor.mi[o]/passo;
-                        num = ((b - a)*valor.FLUXO_ANGULAR[g][ni][o]) + Q + valor.smgi[g][ni - 1][o];
+                        b   = -valor.mi[o] / passo;
+                        num = ((b - a) * valor.FLUXO_ANGULAR[g][ni][o]) + Q + valor.smgi[g][ni - 1][o];
                         den = b + a;
-                        fi  = num/den;
+                        fi  = num / den;
                         valor.FLUXO_ANGULAR[g][ni - 1][o] = fi;
                     }
                     ni--;
@@ -262,34 +283,36 @@ a tolerânicia para o processo parar.
             }
         }
 
-        //fluxo escalar
+        //fluxo escalar nos nodos (não é o médio)
         long double somatorio1;
-        aux=-1;
+        aux = -1;
 
-        for(int g=0;g<valor.G;g++){
-            for(int n=0;n<=valor.NODOSX;n++){
+        for (int g = 0; g < valor.G; g++)
+        {
+            for (int n = 0; n <= valor.NODOSX; n++)
+            {
                 somatorio1 = 0;
-                for(int o=0;o < valor.n;o++)
+                for (int o = 0; o < valor.n; o++)
                 {
-                    somatorio1 = somatorio1 + (valor.FLUXO_ANGULAR[g][n][o])*(valor.w[o]);
+                    somatorio1 = somatorio1 + (valor.FLUXO_ANGULAR[g][n][o]) * (valor.w[o]);
                 }
                 somatorio1 = somatorio1 * 0.5;
 
-                if(somatorio1 != 0)
+                if (somatorio1 != 0)
                 {
-                    valor.MODULO = fabs((valor.FLUXO_ESCALAR[g][n] - somatorio1)/somatorio1);
+                    valor.MODULO = fabs((valor.FLUXO_ESCALAR[g][n] - somatorio1)/* / somatorio1*/);
                 }
                 else
                 {
                     valor.MODULO = fabs(valor.FLUXO_ESCALAR[g][n] - somatorio1);
                 }
 
-                aux = max(aux,valor.MODULO); //salva-se o maior erro entre os fluxos escalares
+                aux                       = max(aux, valor.MODULO); //salva-se o maior erro entre os fluxos escalares
                 valor.FLUXO_ESCALAR[g][n] = somatorio1;
 
-                if (std::isnan(valor.FLUXO_ESCALAR[g][n] ))
+                if (std::isnan(valor.FLUXO_ESCALAR[g][n]))
                 {
-                    std::cerr<<"Scalar flux is nan"<<std::endl;
+                    std::cerr << "Scalar flux is nan" << std::endl;
                 }
             }
         }
@@ -301,69 +324,101 @@ a tolerânicia para o processo parar.
         //         cout<<" nodo "<<n<< "fluxo "<<valor.FLUXO_ESCALAR[g][n]<<endl;
         //     }}
 
-        std::ofstream logFile;
+        // std::ofstream logFile;
 
-        logFile.open("logfile.txt", std::ios::app); // Abre o arquivo em modo de adição
+        // logFile.open("logfile.txt", std::ios::app); // Abre o arquivo em modo de adição
 
-        if (!logFile.is_open()) {
-            std::cerr << "Erro ao abrir o arquivo de log!" << std::endl;
-            return;
-        }
+        // if (!logFile.is_open())
+        // {
+        //     std::cerr << "Erro ao abrir o arquivo de log!" << std::endl;
+        //     return;
+        // }
 
-        logFile << "Inicializando variáveis...\n";
+        // logFile << "Inicializando variáveis...\n";
 
-        logFile << "\n" << aux <<"<"<<tolerancia<< "\n\n\n\n";
+        // logFile << "\n" << aux << "<" << tolerancia << "\n\n\n\n";
 
-        for (int g = 0; g < valor.G; g++) {
-            logFile << " Grupo " << g << "\n\n";
-            for (int n = 0; n <= valor.NODOSX; n++) {
-                logFile << " nodo " << n << " fluxo " << valor.FLUXO_ESCALAR[g][n] << std::endl;
-            }
-        }
+        // for (int g = 0; g < valor.G; g++)
+        // {
+        //     logFile << " Grupo " << g << "\n\n";
+        //     for (int n = 0; n <= valor.NODOSX; n++)
+        //     {
+        //         logFile << " nodo " << n << " fluxo " << valor.FLUXO_ESCALAR[g][n] << std::endl;
+        //     }
+        // }
 
-
-        if(aux<tolerancia){//se a diferença entre os fluxos da iteração atual e anterior respeitar uma tolerância, então o programa para.
+        if (aux < tolerancia)
+        {
+            //se a diferença entre os fluxos da iteração atual e anterior respeitar uma tolerância, então o programa para.
             break;
         }
 
         //recalcular smgi
-        long double soma2,soma3;
+        long double soma2 = 0;
+        long double soma3 = 0;
 
-        for(int g=0;g<valor.G;g++){
-            ni=0;
-            for(int r=0;r<valor.n_R;r++){
-                for(int nodo=0;nodo<valor.n_nodos[r];nodo++){
-                    for(int m=0;m<valor.n;m++){
-                        soma3 = 0;
-                        for(int g1=0;g1<valor.G;g1++)
+        std::vector<std::vector<std::vector<long double>>>
+            legendreProj(valor.n, std::vector<std::vector<long double>>(valor.n, std::vector<long double>(valor.L + 1)));
+
+        // Precalcula a parte (2l+1) * P_l(mu_m) * P_l(mu_n) para todas as direcoes e ordens
+        for (int m = 0; m < valor.n; m++)
+        {
+            for (int n = 0; n < valor.n; n++)
+            {
+                for (int l = 0; l <= valor.L; l++)
+                {
+                    legendreProj[m][n][l] = (2 * l + 1) * valor.Mat_Legendre[m][l] * valor.Mat_Legendre[n][l];
+                }
+            }
+        }
+
+        for (int g = 0; g < valor.G; g++)
+        {
+            // ni representa o índice global do nodo atual na malha 1D.
+            int ni = 0;
+
+            for (int r = 0; r < valor.n_R; r++)
+            {
+                int z = valor.Map_R[r] - 1;
+
+                for (int nodo = 0; nodo < valor.n_nodos[r]; nodo++)
+                {
+                    for (int m = 0; m < valor.n; m++)
+                    {
+                        long double soma3 = 0.0;
+
+                        for (int g1 = 0; g1 < valor.G; g1++)
                         {
-                            for(int n=0;n<valor.n;n++)
+                            for (int n = 0; n < valor.n; n++)
                             {
-                                soma2 = 0;
-                                for(int l = 0; l < valor.L+1;l++)
+                                //Fluxo interpolado deveria ser a média, mas para termos de otimização, a divisão por dois está abaixo
+                                long double fluxoInterp = valor.FLUXO_ANGULAR[g1][ni][n] + valor.FLUXO_ANGULAR[g1][ni + 1][n];
+                                long double pesoDir     = valor.w[n];
+                                long double termoEspalhamentoAnisotropico = 0.0;
+
+                                for (int l = 0; l <= valor.L; l++)
                                 {
-                                    a = (2 * l) + 1;
-                                    b = valor.Mat_Legendre[m][l] * valor.Mat_Legendre[n][l];
-                                    soma2 = soma2 + (a * b * (valor.s_s[g][g1][(valor.Map_R[r])-1][l]) ) ;
+                                    // componenteAngularEspalhamento = soma_l( (2l+1) * P_l(mu_m) * P_l(mu_n) * sigma_s_l(g1 ->g) )
+                                    termoEspalhamentoAnisotropico += legendreProj[m][n][l] * valor.s_s[g][g1][z][l];
                                 }
 
-                                soma3 = soma3 + ((valor.FLUXO_ANGULAR[g1][ni+1][n] + valor.FLUXO_ANGULAR[g1][ni][n])*valor.w[n]*soma2);
-
-                                if (std::isnan(soma3))
-                                {
-                                    std::cerr<<"The Number is nan in smgi calculation"<<std::endl;
-                                    soma3 = 0.0;
-                                }
+                                soma3 += fluxoInterp * pesoDir * termoEspalhamentoAnisotropico;
                             }
                         }
-                        valor.smgi[g][ni][m] = 0.25*soma3; //o 0.25 surgiu de 0.5 da expressão somatorio2 vezes 0.5 do somatorio3
-                        if (std::isnan(valor.smgi[g][ni][m] ))
+
+                        //0.5 de Legendre vezes 0.5 da média do fluxo angular (fluxoInterp/2)
+                        valor.smgi[g][ni][m] = 0.25 * soma3;
+
+                        if (std::isnan(valor.smgi[g][ni][m]))
                         {
-                            std::cerr<<"The smgi is nan"<<std::endl;
+                            std::cerr << "The smgi is nan" << std::endl;
                         }
                     }
+
                     ni++;
-                }}}
+                }
+            }
+        }
 
         iteracao++;
     }
@@ -611,7 +666,8 @@ void DDMethod::updateAngularFluxMatrix()
 
 void DDMethod::updateAngularFluxMatrixLeft()
 {
-    for (int g = 0; g < values->G; g++) {
+    for (int g = 0; g < values->G; g++)
+    {
         for (int nodeIndex = 0; nodeIndex <= values->NODOSX; nodeIndex++)
         {
             // Atualização das direções de fluxo para a esquerda (mi < 0)
