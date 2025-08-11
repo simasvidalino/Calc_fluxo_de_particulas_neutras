@@ -46,7 +46,9 @@ void DDMethod::runDDMethodWithTwoThreads(dados_entrada &valor)
     long double num   = 0.0;
     int iteration = 0;
     long double aux;
-    clock_t t1;
+
+    const auto start_time = std::chrono::high_resolution_clock::now();
+
     double tol;
     tol = 1.0/pow(10, values->ordem_parada);
 
@@ -147,10 +149,10 @@ void DDMethod::runDDMethodWithTwoThreads(dados_entrada &valor)
         iteration++;
     }
 
-    t1 = clock();
-
+    const auto end_time               = std::chrono::high_resolution_clock::now();
+    values->tempoFinalDeProcessamento = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                                        / 1000.0f;
     values->iteracaoFinal = iteration;
-    values->tempoFinalDeProcessamento = (float)t1/CLOCKS_PER_SEC;
 }
 
 void DDMethod::runDDMethodWithOneThread(dados_entrada &valor)
@@ -177,7 +179,7 @@ a tolerânicia para o processo parar.
 
     int iteracao = 0;
     long double aux;
-    clock_t t1;
+    const auto start_time = std::chrono::high_resolution_clock::now();
 
     // for (int i = 0; i < valor.n; ++i)
     // {
@@ -423,10 +425,11 @@ a tolerânicia para o processo parar.
         iteracao++;
     }
 
-    t1 = clock(); //medição do tempo de execução
+    const auto end_time               = std::chrono::high_resolution_clock::now();
+    values->tempoFinalDeProcessamento = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
+                                        / 1000.0f;
+    values->iteracaoFinal           = iteracao;
 
-    valor.iteracaoFinal = iteracao;
-    valor.tempoFinalDeProcessamento = (float)t1/CLOCKS_PER_SEC;
 }
 
 void DDMethod::saveTxtFile(dados_entrada &valor)
