@@ -5,10 +5,10 @@
 
 #define PI 3.14159265358979323846
 
-std::tuple<std::vector<double>, std::vector<double>> get_GQ(int N)
+std::tuple<std::vector<long double>, std::vector<long double>> get_GQ(int N)
 {
-    std::vector<double> mi(N);
-    std::vector<double> w(N);
+    std::vector<long double> mi(N);
+    std::vector<long double> w(N);
 
     int M = (N + 1) / 2;
     double u, u1, P1, P2, P3, DP;
@@ -30,7 +30,7 @@ std::tuple<std::vector<double>, std::vector<double>> get_GQ(int N)
             u = u1 - P1 / DP;
         } while (std::fabs(u - u1) > 1e-15);
 
-        double weight = 2.0 / ((1.0 - u * u) * DP * DP);
+        long double weight = 2.0 / ((1.0 - u * u) * DP * DP);
 
         mi[i]         = -u;
         mi[N - i - 1] = u;

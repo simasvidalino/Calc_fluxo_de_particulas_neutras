@@ -161,33 +161,42 @@ struct dados_entrada
 
         if (FLUXO_ANGULAR_DIREITA != nullptr)
         {
-            for (int g = 0; g < G; ++g) {
+            for (int g = 0; g < G; ++g)
+            {
                 for (int o = 0; o <= NODOSX; ++o)
                 {
-
-                    safeDelete(FLUXO_ANGULAR_DIREITA);
+                    safeDelete(FLUXO_ANGULAR_DIREITA[g][o]);
                 }
+
                 safeDelete(FLUXO_ANGULAR_DIREITA[g]);
             }
 
             safeDelete(FLUXO_ANGULAR_DIREITA);
         }
 
-        if (FLUXO_ANGULAR_ESQUERDA != nullptr) {
-            for (int g = 0; g < G; ++g) {
-                for (int o = 0; o <= NODOSX; ++o) {
-                    safeDelete(FLUXO_ANGULAR_ESQUERDA);
+        if (FLUXO_ANGULAR_ESQUERDA != nullptr)
+        {
+            for (int g = 0; g < G; ++g)
+            {
+                for (int o = 0; o <= NODOSX; ++o)
+                {
+                    safeDelete(FLUXO_ANGULAR_ESQUERDA[g][o]);
                 }
+
                 safeDelete(FLUXO_ANGULAR_ESQUERDA[g]);
             }
+
             safeDelete(FLUXO_ANGULAR_ESQUERDA);
         }
 
         // Desalocar memória para FLUXO_ESCALAR
-        if (FLUXO_ESCALAR != nullptr) {
-            for (int g = 0; g < G; ++g) {
+        if (FLUXO_ESCALAR != nullptr)
+        {
+            for (int g = 0; g < G; ++g)
+            {
                 safeDelete(FLUXO_ESCALAR[g]);
             }
+
             safeDelete(FLUXO_ESCALAR);
         }
 
