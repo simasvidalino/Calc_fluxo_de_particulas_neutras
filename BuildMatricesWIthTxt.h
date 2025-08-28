@@ -194,8 +194,6 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
     valor.smgi          = new long double**[valor.G];
     valor.FLUXO_ESCALAR = new long double*[valor.G];
 
-    valor.FLUXO_ANGULAR_DIREITA  = new long double**[valor.G];
-    valor.FLUXO_ANGULAR_ESQUERDA = new long double**[valor.G];
 
     for (int g = 0; g < valor.G; g++)
     {
@@ -203,15 +201,9 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
         valor.smgi[g]          = new long double*[valor.NODOSX      ];
         valor.FLUXO_ESCALAR[g] = new long double[(valor.NODOSX)  + 1];
 
-        valor.FLUXO_ANGULAR_DIREITA[g]  = new long double*[(valor.NODOSX) + 1];
-        valor.FLUXO_ANGULAR_ESQUERDA[g] = new long double*[(valor.NODOSX) + 1];
-
         for (int o = 0; o <= valor.NODOSX; o++)
         {
             valor.FLUXO_ANGULAR[g][o] = new long double[valor.n];
-
-            valor.FLUXO_ANGULAR_DIREITA[g][o]   = new long double[valor.n];
-            valor.FLUXO_ANGULAR_ESQUERDA[g][o]  = new long double[valor.n];
         }
 
         for (int o = 0; o < valor.NODOSX; o++)
@@ -219,7 +211,6 @@ void construir_dados(string arquivotxt, dados_entrada &valor)
             valor.smgi[g][o] = new long double[valor.n];
         }
     }
-
 
     //Matriz com os polinômios de Legendre
     legendre_set ( valor.n,valor.mi,valor.w);

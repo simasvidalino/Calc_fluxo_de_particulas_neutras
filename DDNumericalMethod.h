@@ -11,18 +11,28 @@ public:
     static DDMethod *getInstance();
     void destroyInstance();
 
-    void runDDMethodWithTwoThreads(dados_entrada &valor);
-    void runDDMethodWithOneThread(dados_entrada &valor);
+    void runDDMethodWithOMP(dados_entrada &data);
+    void runDDMethodWithTwoThreads(dados_entrada &data);
+    void runDDMethodWithOneThread(dados_entrada &data);
 
-    void saveTxtFile(dados_entrada &valor);
+    void saveTxtFile(dados_entrada &data);
 
 protected:
+    virtual void initVariables();
+
+    //It is not the one in the middle of node.
+    virtual long double solveScalarFluxWithAbsoluteCriteria();
+    virtual long double solveScalarFluxWithRelativeCriteria();
+
     virtual void leftScan();
     virtual void rightScan();
-    virtual void initVariables();
-    virtual void updateAngularFluxMatrix();
-    virtual void updateAngularFluxMatrixLeft();
-    virtual void updateAngularFluxMatrixRight();
+
+    virtual void leftScanReflective();
+    virtual void rightScanReflective();
+
+    virtual void calculateScatteringSourceSmgi();
+
+    virtual void writeLog();
 
 private:
     static DDMethod* myPointer;

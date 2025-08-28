@@ -29,6 +29,7 @@ struct dados_entrada
 * tipo_cd      -> Tipo da condição de contorno da direita
 * fonte_g      -> Intensidade da fonte por região no problema físico (1D) Multigrupo
 * Ordem_parada -> Ordem do valor a atingir para a parada. Ex: Ordem_parada=7, então o erro é 10^7
+* tipo_contorno-> Tipo de critério de parada (0 = Aboluta, 1 = relativa)
 * cceg - ccdg  -> valor do fluxo físico incidente para o problema físico Cond Cont Prescrita por Grupo
 * periodicidade-> valor, em nodos/cm, que os dados estarão no arquivo de sáida
 
@@ -37,7 +38,7 @@ struct dados_entrada
     long double **s_t;
     double **fonte_g;
     long double ****s_s;
-    short int n = 0, L = 0, G = 0, n_R = 0, n_Z = 0, tipo_ce = 0, tipo_cd = 0, ordem_parada = 0;
+    short int n = 0, L = 0, G = 0, n_R = 0, n_Z = 0, tipo_ce = 0, tipo_cd = 0, ordem_parada = 0, tipo_criterio_parada = 1;
     double periodicidade = 0.0;
     short int *n_nodos,*Map_R;
     int iteracaoFinal = 0;
@@ -67,13 +68,13 @@ struct dados_entrada
     long double *PASSO;
     int *CONTX;
     long double ***FLUXO_ANGULAR;
-    long double ***FLUXO_ANGULAR_DIREITA;
-    long double ***FLUXO_ANGULAR_ESQUERDA;
 
     long double **FLUXO_ESCALAR;
     long double***smgi;
     int NODOSX;
     double **Mat_Legendre;
+
+    std::vector<std::vector<std::vector<long double>>> legendreProj;
 
     ~dados_entrada()
     {
@@ -146,47 +147,11 @@ struct dados_entrada
                 for (int o = 0; o <= NODOSX; ++o)
                 {
                     safeDelete(FLUXO_ANGULAR[g][o]);
-                    safeDelete(FLUXO_ANGULAR_DIREITA[g][o]);
-                    safeDelete(FLUXO_ANGULAR_ESQUERDA[g][o]);
                 }
                 safeDelete(FLUXO_ANGULAR[g]);
-                safeDelete(FLUXO_ANGULAR_ESQUERDA[g]);
-                safeDelete(FLUXO_ANGULAR_DIREITA[g]);
             }
 
             safeDelete(FLUXO_ANGULAR);
-            safeDelete(FLUXO_ANGULAR_DIREITA);
-            safeDelete(FLUXO_ANGULAR_ESQUERDA);
-        }
-
-        if (FLUXO_ANGULAR_DIREITA != nullptr)
-        {
-            for (int g = 0; g < G; ++g)
-            {
-                for (int o = 0; o <= NODOSX; ++o)
-                {
-                    safeDelete(FLUXO_ANGULAR_DIREITA[g][o]);
-                }
-
-                safeDelete(FLUXO_ANGULAR_DIREITA[g]);
-            }
-
-            safeDelete(FLUXO_ANGULAR_DIREITA);
-        }
-
-        if (FLUXO_ANGULAR_ESQUERDA != nullptr)
-        {
-            for (int g = 0; g < G; ++g)
-            {
-                for (int o = 0; o <= NODOSX; ++o)
-                {
-                    safeDelete(FLUXO_ANGULAR_ESQUERDA[g][o]);
-                }
-
-                safeDelete(FLUXO_ANGULAR_ESQUERDA[g]);
-            }
-
-            safeDelete(FLUXO_ANGULAR_ESQUERDA);
         }
 
         // Desalocar memória para FLUXO_ESCALAR

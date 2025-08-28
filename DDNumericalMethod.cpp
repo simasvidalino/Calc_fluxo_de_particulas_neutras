@@ -5,14 +5,13 @@
 #include <iostream>
 #include <string>
 #include <fstream>         //trabalhar com arquivo
-#include <ctime>           //para medir o tempo de execução
 #include <cmath>           //para usar a função pow
 #include <sstream>         //converter string para double, usar ostringstream para o titulo de saída
 #include <iomanip>         //para mostrar maior numero de casas decimais na tela
 
-
-std::mutex mtxl;
-std::mutex mtxr;
+#include <atomic>
+#include <omp.h>
+#include <future>
 
 DDMethod* DDMethod::myPointer = nullptr;
 
@@ -33,131 +32,13 @@ void DDMethod::destroyInstance()
     }
 }
 
-void DDMethod::runDDMethodWithTwoThreads(dados_entrada &valor)
+void DDMethod::runDDMethodWithOMP(dados_entrada &data)
 {
-    values = &valor;
+#ifdef USE_OPENMP
+    const int max_threads = omp_get_max_threads();
+    std::cout << "OpenMP enabled, max_threads = " << max_threads<< " threads\n"<<std::endl;
 
-    initVariables();
-
-    int ni = 0;
-    long double fi    = 0.0;
-    long double a     = 0.0;
-    long double b     = 0.0;
-    long double num   = 0.0;
-    int iteration = 0;
-    long double aux;
-
-    const auto start_time = std::chrono::high_resolution_clock::now();
-
-    double tol;
-    tol = 1.0/pow(10, values->ordem_parada);
-
-    while (iteration < values->iteracao)
-    {
-        std::thread righthread(&DDMethod::rightScan, this);
-        std::thread leftThread(&DDMethod::leftScan, this);
-
-        leftThread.join();
-        righthread.join();
-
-        //fluxo escalar
-        long double somatorio1;
-        aux=-1;
-
-        for(int g=0;g<values->G;g++)
-        {
-            for(int n=0;n<=values->NODOSX;n++)
-            {
-                somatorio1 = 0;
-                for(int o=0;o < values->n;o++)
-                {
-                    somatorio1 = somatorio1 + (values->FLUXO_ANGULAR[g][n][o])*(values->w[o]);
-                }
-                somatorio1 = somatorio1 * 0.5;
-
-                if(somatorio1 != 0)
-                {
-                    values->MODULO = fabs((values->FLUXO_ESCALAR[g][n] - somatorio1)/somatorio1);
-                }
-                else
-                {
-                    values->MODULO = fabs(values->FLUXO_ESCALAR[g][n] - somatorio1);
-                }
-
-                aux = max(aux,values->MODULO); //salva-se o maior erro entre os fluxos escalares
-                values->FLUXO_ESCALAR[g][n] = somatorio1;
-
-                if (std::isnan(values->FLUXO_ESCALAR[g][n] ))
-                {
-                    std::cerr<<"Scalar flux is nan"<<std::endl;
-                }
-            }
-        }
-
-        // cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
-        // for(int g=0;g<values->G;g++){
-        //     cout<<" Grupo "<<values->G<<"\n\n";
-        //     for(int n=0;n<=values->NODOSX;n++){
-        //         cout<<" nodo "<<n<< "fluxo "<<values->FLUXO_ESCALAR[g][n]<<endl;
-        //     }}
-
-
-        if(aux<tol)
-        {//se a diferença entre os fluxos da iteração atual e anterior respeitar uma tolerância, então o programa para.
-            break;
-        }
-
-        //recalcular smgi
-        long double soma2,soma3;
-
-        for(int g=0;g<values->G;g++){
-            ni=0;
-            for(int r=0;r<values->n_R;r++){
-                for(int nodo=0;nodo<values->n_nodos[r];nodo++){
-                    for(int m=0;m<values->n;m++){
-                        soma3 = 0;
-                        for(int g1=0;g1<values->G;g1++)
-                        {
-                            for(int n=0;n<values->n;n++)
-                            {
-                                soma2 = 0;
-                                for(int l = 0; l < values->L+1;l++)
-                                {
-                                    a = (2 * l) + 1;
-                                    b = values->Mat_Legendre[m][l] * values->Mat_Legendre[n][l];
-                                    soma2 = soma2 + (a * b * (values->s_s[g][g1][(values->Map_R[r])-1][l]) ) ;
-                                }
-
-                                soma3 = soma3 + ((values->FLUXO_ANGULAR[g1][ni+1][n] + values->FLUXO_ANGULAR[g1][ni][n])*values->w[n]*soma2);
-
-                                if (std::isnan(soma3))
-                                {
-                                    std::cerr<<"The Number is nan in smgi calculation"<<std::endl;
-                                    soma3 = 0.0;
-                                }
-                            }
-                        }
-                        values->smgi[g][ni][m] = 0.25*soma3; //o 0.25 surgiu de 0.5 da expressão somatorio2 vezes 0.5 do somatorio3
-                        if (std::isnan(values->smgi[g][ni][m] ))
-                        {
-                            std::cerr<<"The smgi is nan"<<std::endl;
-                        }
-                    }
-                    ni++;
-                }}}
-
-        iteration++;
-    }
-
-    const auto end_time               = std::chrono::high_resolution_clock::now();
-    values->tempoFinalDeProcessamento = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
-                                        / 1000.0f;
-    values->iteracaoFinal = iteration;
-}
-
-void DDMethod::runDDMethodWithOneThread(dados_entrada &valor)
-{
-    /**************************************** método DD***********************************************************************
+/**************************************** método DD***********************************************************************
 
 O Algoritmo
 
@@ -170,276 +51,266 @@ a tolerânicia para o processo parar.
 6- Caso a número de iterações chegue no valor declarado, o processo para.
 
 ************************************************************************************************************************/
-    values = &valor;
+    values = &data;
+    long double somatorio1;
+    long double aux = -1;
 
-    long double tolerancia;
-    tolerancia = 1 / pow(10, valor.ordem_parada);
+    initVariables();
+    long double iteration_max_error = 0.0;
+
+    const long double tolerancia = 1.0 / std::pow(10.0L, values->ordem_parada);
+    const auto &w = values->w;
+    const auto &n = values->n;
+
+    // Pré-computar funções
+    auto rightScanFunc = (values->tipo_ce == 2) ? &DDMethod::rightScanReflective : &DDMethod::rightScan;
+    auto leftScanFunc = (values->tipo_cd == 2) ? &DDMethod::leftScanReflective : &DDMethod::leftScan;
+
+    int iteracao = 0;
+    long double max_error = 0.0;
+    const auto start_time = std::chrono::high_resolution_clock::now();
+
+    // Criar pool de threads uma única vez
+#pragma omp parallel
+    {
+        while (iteracao < values->iteracao.load(std::memory_order_relaxed))
+        {
+#pragma omp sections
+            {
+#pragma omp section
+                (this->*rightScanFunc)();
+
+#pragma omp section
+                (this->*leftScanFunc)();
+            }
+             #pragma omp for collapse(2)
+            // Restante do cálc
+
+            // Barreira implícita - espera tasks completarem
+            //fluxo escalar nos nodos (não é o médio)
+
+            for (int g = 0; g < values->G; g++)
+            {
+                for (int n = 0; n <= values->NODOSX; n++)
+                {
+                    somatorio1 = 0;
+
+                    for (int o = 0; o < values->n; o++)
+                    {
+                        somatorio1 = somatorio1 + (values->FLUXO_ANGULAR[g][n][o]) * (values->w[o]);
+                    }
+
+                    somatorio1 = somatorio1 * 0.5;
+
+                    if (somatorio1 != 0)
+                    {
+                        values->MODULO = fabs((values->FLUXO_ESCALAR[g][n] - somatorio1) / somatorio1);
+                    }
+                    else
+                    {
+                        values->MODULO = fabs(values->FLUXO_ESCALAR[g][n] - somatorio1);
+                    }
+
+                    aux = max(aux, values->MODULO); //salva-se o maior erro entre os fluxos escalares
+
+                    if (   ( somatorio1 < 0.0)
+                        || ( std::isnan( somatorio1 ) ) )
+                    {
+                        //std::cerr << "Scalar flux is nan or negative " << somatorio1 << std::endl;
+                        //values->FLUXO_ESCALAR[g][n] = 0.0;
+                    }
+                    else
+                    {
+                        //std::cerr << "Scalar flux is Positive " << somatorio1 << std::endl;
+
+                        values->FLUXO_ESCALAR[g][n] = somatorio1;
+                    }
+                }
+            }
+
+            // cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
+            // for(int g=0;g<values->G;g++){
+            //     cout<<" Grupo "<<values->G<<"\n\n";
+            //     for(int n=0;n<=values->NODOSX;n++){
+            //         cout<<" nodo "<<n<< "fluxo "<<values->FLUXO_ESCALAR[g][n]<<endl;
+            //     }}
+
+            // std::ofstream logFile;
+
+            // logFile.open("logfile.txt", std::ios::app); // Abre o arquivo em modo de adição
+
+            // if (!logFile.is_open())
+            // {
+            //     std::cerr << "Erro ao abrir o arquivo de log!" << std::endl;
+            //     return;
+            // }
+
+            // logFile << "Inicializando variáveis...\n";
+
+            // logFile << "\n" << aux << "<" << tolerancia << "\n\n\n\n";
+
+            // for (int g = 0; g < values->G; g++)
+            // {
+            //     logFile << " Grupo " << g << "\n\n";
+            //     for (int n = 0; n <= values->NODOSX; n++)
+            //     {
+            //         logFile << " nodo " << n << " fluxo " << values->FLUXO_ESCALAR[g][n] << std::endl;
+            //     }
+            // }
+
+            if (aux < tolerancia)
+            {
+                //se a diferença entre os fluxos da iteração atual e anterior respeitar uma tolerância, então o programa para.
+                break;
+            }
+
+            calculateScatteringSourceSmgi();
+
+            iteracao++;
+        }
+
+    }
+    // Cálculo final do tempo
+    const auto end_time = std::chrono::high_resolution_clock::now();
+    values->tempoFinalDeProcessamento = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() / 1000.0f;
+    values->iteracaoFinal = iteracao;
+
+    std::cout << "Iterações: " << values->iteracaoFinal << ", Tempo: " << values->tempoFinalDeProcessamento << "s"
+              << ", Erro final: " << max_error << std::endl;
+#else
+    runDDMethodWithOneThread(data);
+#endif
+}
+
+void DDMethod::runDDMethodWithTwoThreads(dados_entrada &data)
+{
+    /**************************************** método DD***********************************************************************
+
+O Algoritmo
+
+1- Colocar as condições de contorno nos fluxos angulares ψ
+2- fazer a varredura para a direita e em seguida para a esquerda, obtendo fluxos angulares ψ em cada direção.
+3- Calcular fluxo escalar
+4- Testar convergência: a diferença entre o fluxo escalar calculado na iteração anterior com a atual deve ser menor do que
+a tolerânicia para o processo parar.
+5- Recalcular fonte de espalhamento e repetir todo o processo.
+6- Caso a número de iterações chegue no values declarado, o processo para.
+
+************************************************************************************************************************/
+    values = &data;
 
     initVariables();
 
-    int iteracao = 0;
-    long double aux;
-    const auto start_time = std::chrono::high_resolution_clock::now();
+    const auto start_time    = std::chrono::high_resolution_clock::now();
+    const long double tol    = 1.0 / pow(10, values->ordem_parada);
+    int iteration            = 0;
+    long double maxError     = 0.0L;
 
-    // for (int i = 0; i < valor.n; ++i)
-    // {
-    //     std::cout << std::fixed << std::setprecision(15) << "i = " << i << ", mi_hardcoded = " << valor.mi[i]
-    //               << ", w_hardcoded = " << valor.w[i] << std::endl;
-    // }
+    auto rightScanFunc       = (values->tipo_ce == 2) ? &DDMethod::rightScanReflective : &DDMethod::rightScan;
+    auto leftScanFunc        = (values->tipo_cd == 2) ? &DDMethod::leftScanReflective : &DDMethod::leftScan;
+    auto calculateScalarFlux = (values->tipo_criterio_parada == 1) ? &DDMethod::solveScalarFluxWithRelativeCriteria
+                                                                   : &DDMethod::solveScalarFluxWithAbsoluteCriteria;
+    std::future<void> rightFuture;
+    std::future<void> leftFuture;
 
-    while (iteracao < valor.iteracao.load(std::memory_order_relaxed))
+    while (iteration < values->iteracao.load(std::memory_order_relaxed))
     {
-        int ni                   = 0;
+        rightFuture = std::async(std::launch::async, rightScanFunc, this);
+        leftFuture = std::async(std::launch::async, leftScanFunc, this);
 
-        long double fi           = 0.0;
-        long double Q            = 0.0;
-        long double a            = 0.0;
-        long double b            = 0.0;
-        long double num          = 0.0;
-        long double den          = 1.0;
-        long double passo        = 0.5;
+        rightFuture.wait();
+        leftFuture.wait();
 
-        short int stRegionIndice = 0;
+        maxError = (this->*calculateScalarFlux)();
 
-        if (valor.tipo_ce == 2)
+        if (maxError < tol)
         {
-            for (int g = 0; g < valor.G; g++)
-            {
-                int a = 0;
-                for (int o = (valor.n / 2); o < valor.n; o++)
-                {
-                    valor.FLUXO_ANGULAR[g][0][o] = valor.FLUXO_ANGULAR[g][0][a];
-                    a++;
-                }
-            }
-        }
-
-        //varredura para a direita mi > 0
-        // psi(i+1) = [(b - a) * psi(i) + Q + smgi] / (b + a)
-        for (int g = 0; g < valor.G; g++)
-        {
-            // ni representa o índice global do nodo atual na malha 1D. Neste caso, ele é crescente
-            ni = 0;
-            for (int r = 0; r < valor.n_R; r++)
-            {
-                stRegionIndice = valor.Map_R[r] - 1;
-
-                Q              = valor.fonte_g[g][r];
-                a              = 0.5 * valor.s_t[g][stRegionIndice];
-                passo          = valor.PASSO[r];
-
-                for (int n = 0; n < (valor.n_nodos[r]); n++)
-                {
-                    //n muda conforme mudamos de regiao, ou seja, cada regiao tem uma quantidade de nodos
-                    for (int o = (valor.n / 2); o < valor.n; o++)
-                    {
-                        //a varredura pela direita contempla a metadade das direções mi
-                        b   = valor.mi[o] / passo;
-                        num = ((b - a) * valor.FLUXO_ANGULAR[g][ni][o]) + Q + valor.smgi[g][ni][o];
-                        den = b + a;
-                        fi  = num / den;
-                        valor.FLUXO_ANGULAR[g][ni + 1][o] = fi;
-                    }
-                    ni++;
-                }
-            }
-        }
-
-        if (valor.tipo_cd == 2)
-        {
-            for (int g = 0; g < valor.G; g++)
-            {
-                int a = 0;
-                for (int o = 0; o < valor.n / 2; o++)
-                {
-                    valor.FLUXO_ANGULAR[g][valor.NODOSX][o] = valor.FLUXO_ANGULAR[g][valor.NODOSX][a];
-                    a++;
-                }
-            }
-        }
-
-        //varredura para a esquerda mi < 0
-        //psi(i-1) = [(b - a) * psi(i) + Q + smgi] / (b + a)
-        for (int g = 0; g < valor.G; g++)
-        {
-            // ni representa o índice global do nodo atual na malha 1D. Neste caso, ele é decrescente
-            ni = valor.NODOSX;
-            for (int r = (valor.n_R - 1); r >= 0; r--)
-            {
-                Q     = valor.fonte_g[g][r];
-                a     = 0.5 * valor.s_t[g][valor.Map_R[r] - 1];
-                passo = valor.PASSO[r];
-
-                for (int n = valor.n_nodos[r] - 1; n >= 0; n--)
-                {
-                    for (int o = 0; o < (valor.n / 2); o++)
-                    {
-                        b   = -valor.mi[o] / passo;
-                        num = ((b - a) * valor.FLUXO_ANGULAR[g][ni][o]) + Q + valor.smgi[g][ni - 1][o];
-                        den = b + a;
-                        fi  = num / den;
-                        valor.FLUXO_ANGULAR[g][ni - 1][o] = fi;
-                    }
-                    ni--;
-                }
-            }
-        }
-
-        //fluxo escalar nos nodos (não é o médio)
-        long double somatorio1;
-        aux = -1;
-
-        for (int g = 0; g < valor.G; g++)
-        {
-            for (int n = 0; n <= valor.NODOSX; n++)
-            {
-                somatorio1 = 0;
-                for (int o = 0; o < valor.n; o++)
-                {
-                    somatorio1 = somatorio1 + (valor.FLUXO_ANGULAR[g][n][o]) * (valor.w[o]);
-                }
-                somatorio1 = somatorio1 * 0.5;
-
-                if (somatorio1 != 0)
-                {
-                    valor.MODULO = fabs((valor.FLUXO_ESCALAR[g][n] - somatorio1)/* / somatorio1*/);
-                }
-                else
-                {
-                    valor.MODULO = fabs(valor.FLUXO_ESCALAR[g][n] - somatorio1);
-                }
-
-                aux                       = max(aux, valor.MODULO); //salva-se o maior erro entre os fluxos escalares
-                valor.FLUXO_ESCALAR[g][n] = somatorio1;
-
-                if (std::isnan(valor.FLUXO_ESCALAR[g][n]))
-                {
-                    std::cerr << "Scalar flux is nan" << std::endl;
-                }
-            }
-        }
-
-        // cout<<"\n\n\n\n"<<aux<<"\n\n\n\n";
-        // for(int g=0;g<valor.G;g++){
-        //     cout<<" Grupo "<<valor.G<<"\n\n";
-        //     for(int n=0;n<=valor.NODOSX;n++){
-        //         cout<<" nodo "<<n<< "fluxo "<<valor.FLUXO_ESCALAR[g][n]<<endl;
-        //     }}
-
-        // std::ofstream logFile;
-
-        // logFile.open("logfile.txt", std::ios::app); // Abre o arquivo em modo de adição
-
-        // if (!logFile.is_open())
-        // {
-        //     std::cerr << "Erro ao abrir o arquivo de log!" << std::endl;
-        //     return;
-        // }
-
-        // logFile << "Inicializando variáveis...\n";
-
-        // logFile << "\n" << aux << "<" << tolerancia << "\n\n\n\n";
-
-        // for (int g = 0; g < valor.G; g++)
-        // {
-        //     logFile << " Grupo " << g << "\n\n";
-        //     for (int n = 0; n <= valor.NODOSX; n++)
-        //     {
-        //         logFile << " nodo " << n << " fluxo " << valor.FLUXO_ESCALAR[g][n] << std::endl;
-        //     }
-        // }
-
-        if (aux < tolerancia)
-        {
-            //se a diferença entre os fluxos da iteração atual e anterior respeitar uma tolerância, então o programa para.
             break;
         }
 
-        //recalcular smgi
-        long double soma2 = 0;
-        long double soma3 = 0;
-
-        std::vector<std::vector<std::vector<long double>>>
-            legendreProj(valor.n, std::vector<std::vector<long double>>(valor.n, std::vector<long double>(valor.L + 1)));
-
-        // Precalcula a parte (2l+1) * P_l(mu_m) * P_l(mu_n) para todas as direcoes e ordens
-        for (int m = 0; m < valor.n; m++)
-        {
-            for (int n = 0; n < valor.n; n++)
-            {
-                for (int l = 0; l <= valor.L; l++)
-                {
-                    legendreProj[m][n][l] = (2 * l + 1) * valor.Mat_Legendre[m][l] * valor.Mat_Legendre[n][l];
-                }
-            }
-        }
-
-        for (int g = 0; g < valor.G; g++)
-        {
-            // ni representa o índice global do nodo atual na malha 1D.
-            int ni = 0;
-
-            for (int r = 0; r < valor.n_R; r++)
-            {
-                int z = valor.Map_R[r] - 1;
-
-                for (int nodo = 0; nodo < valor.n_nodos[r]; nodo++)
-                {
-                    for (int m = 0; m < valor.n; m++)
-                    {
-                        long double soma3 = 0.0;
-
-                        for (int g1 = 0; g1 < valor.G; g1++)
-                        {
-                            for (int n = 0; n < valor.n; n++)
-                            {
-                                //Fluxo interpolado deveria ser a média, mas para termos de otimização, a divisão por dois está abaixo
-                                long double fluxoInterp = valor.FLUXO_ANGULAR[g1][ni][n] + valor.FLUXO_ANGULAR[g1][ni + 1][n];
-                                long double pesoDir     = valor.w[n];
-                                long double termoEspalhamentoAnisotropico = 0.0;
-
-                                for (int l = 0; l <= valor.L; l++)
-                                {
-                                    // componenteAngularEspalhamento = soma_l( (2l+1) * P_l(mu_m) * P_l(mu_n) * sigma_s_l(g1 ->g) )
-                                    termoEspalhamentoAnisotropico += legendreProj[m][n][l] * valor.s_s[g][g1][z][l];
-                                }
-
-                                soma3 += fluxoInterp * pesoDir * termoEspalhamentoAnisotropico;
-                            }
-                        }
-
-                        //0.5 de Legendre vezes 0.5 da média do fluxo angular (fluxoInterp/2)
-                        valor.smgi[g][ni][m] = 0.25 * soma3;
-
-                        if (std::isnan(valor.smgi[g][ni][m]))
-                        {
-                            std::cerr << "The smgi is nan" << std::endl;
-                        }
-                    }
-
-                    ni++;
-                }
-            }
-        }
-
-        iteracao++;
+        calculateScatteringSourceSmgi();
+        iteration++;
     }
+
+    const auto end_time = std::chrono::high_resolution_clock::now();
+    values->tempoFinalDeProcessamento = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() / 1000.0f;
+    values->iteracaoFinal = iteration;
+
+    std::cout << "time runDDMethodWithTwoThreads() " << values->tempoFinalDeProcessamento << " criterio_parada "
+              << values->tipo_criterio_parada << " maxError " << maxError
+              <<" iteration "<<iteration<<std::endl;
+
+}
+
+void DDMethod::runDDMethodWithOneThread(dados_entrada &data)
+{
+/**************************************** método DD***********************************************************************
+
+O Algoritmo
+
+1- Colocar as condições de contorno nos fluxos angulares ψ
+2- fazer a varredura para a direita e em seguida para a esquerda, obtendo fluxos angulares ψ em cada direção.
+3- Calcular fluxo escalar
+4- Testar convergência: a diferença entre o fluxo escalar calculado na iteração anterior com a atual deve ser menor do que
+a tolerânicia para o processo parar.
+5- Recalcular fonte de espalhamento e repetir todo o processo.
+6- Caso a número de iterações chegue no values declarado, o processo para.
+
+************************************************************************************************************************/
+    values = &data;
+
+    const long double tol = 1.0L / static_cast<long double>(pow(10, values->ordem_parada));
+    long double maxError  = 0.0L;
+    initVariables();
+
+    auto rightScanFunc       = (values->tipo_ce == 2) ? &DDMethod::rightScanReflective : &DDMethod::rightScan;
+    auto leftScanFunc        = (values->tipo_cd == 2) ? &DDMethod::leftScanReflective : &DDMethod::leftScan;
+    auto calculateScalarFlux = (values->tipo_criterio_parada == 1) ? &DDMethod::solveScalarFluxWithRelativeCriteria
+                                                                   : &DDMethod::solveScalarFluxWithAbsoluteCriteria;
+    int iteration = 0;
+
+    const auto start_time = std::chrono::high_resolution_clock::now();
+
+    while (iteration < values->iteracao.load(std::memory_order_relaxed))
+    {
+        (this->*rightScanFunc)();
+        (this->*leftScanFunc)();
+
+        maxError = (this->*calculateScalarFlux)();
+
+        if (maxError < tol)
+        {
+            break;
+        }
+
+        calculateScatteringSourceSmgi();
+
+        iteration++;
+    }
+
+    //writeLog();
 
     const auto end_time               = std::chrono::high_resolution_clock::now();
     values->tempoFinalDeProcessamento = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count()
                                         / 1000.0f;
-    values->iteracaoFinal           = iteracao;
+    values->iteracaoFinal           = iteration;
 
+    std::cout<<"time runDDMethodWithOneThreads() "
+              <<values->tempoFinalDeProcessamento
+              <<" criterio_parada "<<values->tipo_criterio_parada
+              <<" maxError "<<maxError
+              <<" iteration "<<iteration<<std::endl;
 }
 
-void DDMethod::saveTxtFile(dados_entrada &valor)
+void DDMethod::saveTxtFile(dados_entrada &data)
 {
+    values = &data;
     ofstream saida_dados;
     string titulo;
     ostringstream auxiliar;
 
     // Gera o nome do arquivo baseado nos parâmetros
-    auxiliar << "Saida_Dados_R" << valor.n_R << "_G" << valor.G << "_L" << valor.L << "_N" << valor.n << "_Nod" << valor.NODOSX << ".txt";
+    auxiliar << "Saida_Dados_R" << values->n_R << "_G" << values->G << "_L" << values->L << "_N" << values->n << "_Nod" << values->NODOSX << ".txt";
     titulo = auxiliar.str();
 
     // Abre o arquivo para escrita
@@ -451,43 +322,43 @@ void DDMethod::saveTxtFile(dados_entrada &valor)
     saida_dados << string(160, '*') << endl;
 
     // Informações gerais sobre o processamento
-    saida_dados << "Número de iter:\t\t" << valor.iteracaoFinal << endl;
-    saida_dados << "Tempo(s):\t\t" << valor.tempoFinalDeProcessamento / CLOCKS_PER_SEC << endl; // Converte o tempo para segundos
+    saida_dados << "Número de iter:\t\t" << values->iteracaoFinal << endl;
+    saida_dados << "Tempo(s):\t\t" << values->tempoFinalDeProcessamento / CLOCKS_PER_SEC << endl; // Converte o tempo para segundos
     saida_dados << string(160, '_') << endl;
     saida_dados << string(160, '*') << endl;
 
     // Título da seção de fluxo angular final
-    saida_dados << "Fluxo angular final\t\titer: " << valor.iteracaoFinal << endl;
+    saida_dados << "Fluxo angular final\t\titer: " << values->iteracaoFinal << endl;
     saida_dados << string(160, '*') << endl;
 
     // Cabeçalhos da tabela de resultados
     saida_dados << "Grupo\t\t";
-    valor.TAM_TOTAL = 0;
+    values->TAM_TOTAL = 0;
 
     // Calcula o comprimento total e imprime a primeira linha de distâncias
-    for (int r = 0; r <= valor.n_R; r++) {
-        valor.TAM_TOTAL += valor.TAM[r];
+    for (int r = 0; r <= values->n_R; r++) {
+        values->TAM_TOTAL += values->TAM[r];
     }
 
     double t = 0;
-    while (t <= valor.TAM_TOTAL) {
+    while (t <= values->TAM_TOTAL) {
         saida_dados << setw(15)  << t << "cm";
-        t += valor.periodicidade;
+        t += values->periodicidade;
     }
     saida_dados << endl;
 
     saida_dados << string(160, '*') << endl;
 
     // Escrita dos fluxos escalares para cada grupo
-    for (int g = 0; g < valor.G; g++) {
+    for (int g = 0; g < values->G; g++) {
         saida_dados << g + 1 << "\t\t"; // Coluna do grupo
         int nod = 0;
-        int steps = static_cast<int>(valor.TAM_TOTAL / valor.periodicidade);
+        int steps = static_cast<int>(values->TAM_TOTAL / values->periodicidade);
 
         for (int i = 0; i <= steps; ++i)
         {
-            saida_dados << setw(15) << scientific << setprecision(6) << valor.FLUXO_ESCALAR[g][nod];
-            nod += (valor.NODOSX * valor.periodicidade) / valor.TAM_TOTAL;
+            saida_dados << setw(15) << scientific << setprecision(6) << values->FLUXO_ESCALAR[g][nod];
+            nod += (values->NODOSX * values->periodicidade) / values->TAM_TOTAL;
         }
         saida_dados << endl;
     }
@@ -506,98 +377,232 @@ void DDMethod::leftScan()
     long double den   = 1.0;
     long double passo = 0.5;
 
-    std::unique_lock<std::mutex> lock(mtxr);
-
-    if(values->tipo_cd == 2)
+    //varredura para a esquerda mi < 0
+    //psi(i-1) = [(b - a) * psi(i) + Q + smgi] / (b + a)
+    for (int g = 0; g < values->G; g++)
     {
-        for(int g=0;g<values->G;g++){
-            int a=0;
-            for(int o=0;o<values->n/2;o++){
-                values->FLUXO_ANGULAR_ESQUERDA[g][values->NODOSX][o] =
-                    values->FLUXO_ANGULAR[g][values->NODOSX][a] ;
-                a++;
-            }}}
-
-    lock.unlock();
-
-    //varredura para a esquerda mi<0
-    for(int g=0;g < values->G;g++)
-    {
+        // ni representa o índice global do nodo atual na malha 1D. Neste caso, ele é decrescente
         ni = values->NODOSX;
-        for(int r=(values->n_R-1);r>=0;r--)
+        for (int r = (values->n_R - 1); r >= 0; r--)
         {
             Q     = values->fonte_g[g][r];
-            a     = 0.5*values->s_t[g][values->Map_R[r]-1];
+            a     = 0.5L * values->s_t[g][values->Map_R[r] - 1];
             passo = values->PASSO[r];
 
-            for(int n=values->n_nodos[r]-1;n>=0;n--)
+            for (int n = values->n_nodos[r] - 1; n >= 0; n--)
             {
-                for(int o=0;o<(values->n/2);o++)
+                for (int o = 0; o < (values->n / 2); o++)
                 {
-                    b   = -values->mi[o]/passo;
-                    num = ((b - a)*values->FLUXO_ANGULAR_ESQUERDA[g][ni][o]) + Q + values->smgi[g][ni - 1][o];
+                    b   = -values->mi[o] / passo;
+                    num = ((b - a) * values->FLUXO_ANGULAR[g][ni][o]) + Q + values->smgi[g][ni - 1][o];
                     den = b + a;
-                    fi  = num/den;
-                    values->FLUXO_ANGULAR_ESQUERDA[g][ni - 1][o] = fi;
+                    fi  = num / den;
+                    values->FLUXO_ANGULAR[g][ni - 1][o] = fi;
                 }
                 ni--;
             }
         }
     }
-
-    updateAngularFluxMatrixLeft();
 }
 
 void DDMethod::rightScan()
 {
-    int ni = 0;
-    long double fi    = 0.0;
-    long double Q     = 0.0;
-    long double a     = 0.0;
-    long double b     = 0.0;
-    long double num   = 0.0;
-    long double den   = 1.0;
-    long double passo = 0.5;
+    int ni                        = 0;
+    long double fi                = 0.0L;
+    long double Q                 = 0.0L;
+    long double a                 = 0.0L;
+    long double b                 = 0.0L;
+    long double num               = 0.0L;
+    long double den               = 1.0L;
+    long double passo             = 0.5L;
+    short int stRegionIndice      = 0;
 
-    std::unique_lock<std::mutex> lock(mtxr);
-
-    if(values->tipo_ce == 2)
+    //varredura para a direita mi > 0
+    // psi(i+1) = [(b - a) * psi(i) + Q + smgi] / (b + a)
+    for (int g = 0; g < values->G; g++)
     {
-        for(int g=0;g<values->G;g++){
-            int a=0;
-            for(int o=(values->n/2);o<values->n;o++){
-                values->FLUXO_ANGULAR_DIREITA[g][0][o] = values->FLUXO_ANGULAR[g][0][a] ;
-                a++;
-            }}}
-
-    lock.unlock();
-
-    //varredura para a direita mi>0
-    for(int g=0;g<values->G;g++)
-    {
+        // ni representa o índice global do nodo atual na malha 1D. Neste caso, ele é crescente
         ni = 0;
-        for(int r=0;r<values->n_R;r++)
+        for (int r = 0; r < values->n_R; r++)
         {
-            Q     = values->fonte_g[g][r];
-            a     = 0.5 * values->s_t[g][values->Map_R[r] - 1];
-            passo = values->PASSO[r];
+            stRegionIndice = values->Map_R[r] - 1;
 
-            for(int n=0;n<(values->n_nodos[r]);n++)
-            {     //n muda conforme mudamos de regiao, ou seja, cada regiao tem uma quantidade de nodos
-                for(int o=(values->n/2);o<values->n;o++)
-                {  //a varredura pela direita contempla a metadade das direções mi
-                    b = values->mi[o]/passo;
-                    num = ((b - a) * values->FLUXO_ANGULAR_DIREITA[g][ni][o]) + Q + values->smgi[g][ni][o];
+            Q              = values->fonte_g[g][r];
+            a              = 0.5L * values->s_t[g][stRegionIndice];
+            passo          = values->PASSO[r];
+
+            for (int n = 0; n < (values->n_nodos[r]); n++)
+            {
+                //n muda conforme mudamos de regiao, ou seja, cada regiao tem uma quantidade de nodos
+                for (int o = (values->n / 2); o < values->n; o++)
+                {
+                    //a varredura pela direita contempla a metadade das direções mi
+                    b   = values->mi[o] / passo;
+                    num = ((b - a) * values->FLUXO_ANGULAR[g][ni][o]) + Q + values->smgi[g][ni][o];
                     den = b + a;
-                    fi = num/den;
-                    values->FLUXO_ANGULAR_DIREITA[g][ni + 1][o] = fi;
+                    fi  = num / den;
+                    values->FLUXO_ANGULAR[g][ni + 1][o] = fi;
                 }
+                std::cout<<" noder "<<ni<<std::endl;
+
                 ni++;
             }
         }
     }
+}
 
-    updateAngularFluxMatrixRight();
+void DDMethod::leftScanReflective()
+{
+    const double metadeQuadratura = values->n * 0.5;
+    int refletido                 = 0;
+
+    // Ex. N = 4, o = 2, a = 1 -> o = 3, a = 0
+    // mi -0.86113631159405257254 w 0.34785484513745373869 0 entra
+    // mi -0.33998104358485631282 w 0.65214515486254642784 1 entra
+    // mi 0.33998104358485631282  w 0.65214515486254642784 2 sai
+    // mi 0.86113631159405257254  w 0.34785484513745373869 3 sai
+    for (int g = 0; g < values->G; g++)
+    {
+        refletido = values->n - 1;
+        for (int o = 0; o < metadeQuadratura; o++)
+        {
+            //std::cout << "mi = " << values->mi[refletido] << " -m = " << values->mi[o] << std::endl;
+            values->FLUXO_ANGULAR[g][values->NODOSX][o] = values->FLUXO_ANGULAR[g][values->NODOSX][refletido];
+            refletido--;
+        }
+    }
+
+    leftScan();
+}
+
+void DDMethod::rightScanReflective()
+{
+    const double metadeQuadratura = values->n * 0.5;
+    int refletido                 = 0;
+
+    // Ex. N = 4, o = 2, a = 1 -> o = 3, a = 0
+    // mi -0.86113631159405257254 w 0.34785484513745373869 0 sai
+    // mi -0.33998104358485631282 w 0.65214515486254642784 1 sai
+    // mi 0.33998104358485631282  w 0.65214515486254642784 2 entra
+    // mi 0.86113631159405257254  w 0.34785484513745373869 3 entra
+    for (int g = 0; g < values->G; g++)
+    {
+        refletido = metadeQuadratura - 1;
+        for (int o = metadeQuadratura; o < values->n; o++)
+        {
+            //std::cout << "mi = " << values->mi[refletido] << " -m = " << values->mi[o] << std::endl;
+            values->FLUXO_ANGULAR[g][0][o] = values->FLUXO_ANGULAR[g][0][refletido];
+            refletido--;
+        }
+    }
+
+    rightScan();
+}
+
+void DDMethod::calculateScatteringSourceSmgi()
+{
+    //recalcular smgi
+    long double soma2 = 0.0L;
+    long double soma3 = 0.0L;
+
+    for (int g = 0; g < values->G; g++)
+    {
+        // ni representa o índice global do nodo atual na malha 1D.
+        int ni = 0;
+
+        for (int r = 0; r < values->n_R; r++)
+        {
+            int z = values->Map_R[r] - 1;
+
+            for (int nodo = 0; nodo < values->n_nodos[r]; nodo++)
+            {
+                for (int m = 0; m < values->n; m++)
+                {
+                    long double soma3 = 0.0L;
+
+                    for (int g1 = 0; g1 < values->G; g1++)
+                    {
+                        for (int n = 0; n < values->n; n++)
+                        {
+                            //Fluxo interpolado deveria ser a média, mas para termos de otimização, a divisão por dois está abaixo
+                            long double fluxoInterp = values->FLUXO_ANGULAR[g1][ni][n] + values->FLUXO_ANGULAR[g1][ni + 1][n];
+                            long double pesoDir     = values->w[n];
+                            long double termoEspalhamentoAnisotropico = 0.0L;
+
+                            for (int l = 0; l <= values->L; l++)
+                            {
+                                // componenteAngularEspalhamento = soma_l( (2l+1) * P_l(mu_m) * P_l(mu_n) * sigma_s_l(g1 ->g) )
+                                termoEspalhamentoAnisotropico += values->legendreProj[m][n][l] * values->s_s[g][g1][z][l];
+                            }
+
+                            soma3 += fluxoInterp * pesoDir * termoEspalhamentoAnisotropico;
+                        }
+                    }
+
+                    //0.5 de Legendre vezes 0.5 da média do fluxo angular (fluxoInterp/2)
+                    values->smgi[g][ni][m] = 0.25L * soma3;
+
+                    if (std::isnan(values->smgi[g][ni][m]))
+                    {
+                        std::cerr << "The smgi is nan" << std::endl;
+                    }
+                }
+
+                ni++;
+            }
+        }
+    }
+}
+
+void DDMethod::writeLog()
+{
+    for (int g = 0; g < values->G; g++)
+    {
+        cout << " Grupo " << values->G << "\n\n";
+        for (int n = 0; n <= values->NODOSX; n++)
+        {
+            cout << " nodo " << n << "fluxo " << values->FLUXO_ESCALAR[g][n] << endl;
+        }
+    }
+
+    cout << " Fluxo angular " << "\n\n";
+
+    for (int g = 0; g < values->G; g++)
+    {
+        cout << " Grupo " << values->G << "\n\n";
+
+        for (int node = 0; node <= values->NODOSX; node++)
+        {
+            for (int n = 0; n < values->n; n++)
+            {
+                long double fluxo = values->FLUXO_ANGULAR[g][node][n];
+
+                cout << " nodo " << node <<  " fluxo " << fluxo << "\n\n";
+            }
+        }
+    }
+
+    std::ofstream logFile;
+
+    logFile.open("logfile.txt", std::ios::app); // Abre o arquivo em modo de adição
+
+    if (!logFile.is_open())
+    {
+        std::cerr << "Erro ao abrir o arquivo de log!" << std::endl;
+        return;
+    }
+
+    logFile << "Inicializando variáveis...\n";
+
+    for (int g = 0; g < values->G; g++)
+    {
+        logFile << " Grupo " << g << "\n\n";
+        for (int n = 0; n <= values->NODOSX; n++)
+        {
+            logFile << " nodo " << n << " fluxo " << values->FLUXO_ESCALAR[g][n] << std::endl;
+        }
+    }
+
 }
 
 void DDMethod::initVariables()
@@ -610,9 +615,6 @@ void DDMethod::initVariables()
             for(int n = 0; n < values->n; n++)
             {
                 values->FLUXO_ANGULAR[g][node][n] = 0.0;
-
-                values->FLUXO_ANGULAR_DIREITA[g][node][n]  = 0.0;
-                values->FLUXO_ANGULAR_ESQUERDA[g][node][n] = 0.0;
             }
         }
     }
@@ -624,9 +626,6 @@ void DDMethod::initVariables()
         {
             values->FLUXO_ANGULAR[g][0][n]              = values->cceg[g];
             values->FLUXO_ANGULAR[g][values->NODOSX][n] = values->ccdg[g];
-
-            values->FLUXO_ANGULAR_DIREITA[g][0][n]               = values->cceg[g];
-            values->FLUXO_ANGULAR_ESQUERDA[g][values->NODOSX][n] = values->ccdg[g];
         }
     }
 
@@ -646,53 +645,104 @@ void DDMethod::initVariables()
             }
         }
     }
-}
 
-void DDMethod::updateAngularFluxMatrix()
-{
-    for (int g = 0; g < values->G; g++) {
-        for (int nodeIndex = 0; nodeIndex <= values->NODOSX; nodeIndex++)
+    values->legendreProj.clear();
+    values->legendreProj = std::vector<std::vector<std::vector<long double>>>(
+        values->n, std::vector<std::vector<long double>>(
+            values->n, std::vector<long double>(values->L + 1)));
+
+    // Precalcula a parte (2l+1) * P_l(mu_m) * P_l(mu_n) para todas as direcoes e ordens
+    for (int m = 0; m < values->n; m++)
+    {
+        for (int n = 0; n < values->n; n++)
         {
-            // Atualização das direções de fluxo para a direita (mi > 0)
-            for (int o = 0; o < values->n / 2; o++) {  // Apenas metade das direções (mi > 0)
-                values->FLUXO_ANGULAR[g][nodeIndex][o] = values->FLUXO_ANGULAR_DIREITA[g][nodeIndex][o];
-            }
-
-            // Atualização das direções de fluxo para a esquerda (mi < 0)
-            for (int o = values->n / 2; o < values->n; o++)
-            {  // A outra metade das direções (mi < 0)
-                values->FLUXO_ANGULAR[g][nodeIndex][o] = values->FLUXO_ANGULAR_ESQUERDA[g][nodeIndex][o - (values->n / 2)];
+            for (int l = 0; l <= values->L; l++)
+            {
+                values->legendreProj[m][n][l] = (2 * l + 1) * values->Mat_Legendre[m][l] * values->Mat_Legendre[n][l];
             }
         }
     }
 }
 
-void DDMethod::updateAngularFluxMatrixLeft()
+long double DDMethod::solveScalarFluxWithAbsoluteCriteria()
 {
+    long double somatorio1 = 0.0L;
+    long double maxError   = -1.0L;
+
     for (int g = 0; g < values->G; g++)
     {
-        for (int nodeIndex = 0; nodeIndex <= values->NODOSX; nodeIndex++)
+        for (int n = 0; n <= values->NODOSX; n++)
         {
-            // Atualização das direções de fluxo para a esquerda (mi < 0)
-            for (int o = values->n / 2; o < values->n; o++)
-            {  // A outra metade das direções (mi < 0)
-                values->FLUXO_ANGULAR[g][nodeIndex][o] = values->FLUXO_ANGULAR_ESQUERDA[g][nodeIndex][o - (values->n / 2)];
+            somatorio1 = 0.0L;
+
+            for (int o = 0; o < values->n; o++)
+            {
+                somatorio1 = somatorio1 + (values->FLUXO_ANGULAR[g][n][o]) * (values->w[o]);
+            }
+
+            somatorio1     = somatorio1 * 0.5L;
+            values->MODULO = fabs(values->FLUXO_ESCALAR[g][n] - somatorio1);
+            maxError       = std::max(maxError, values->MODULO); //salva-se o maior erro entre os fluxos escalares
+
+            if (    ( somatorio1 < 0.0L)
+                || ( std::isnan( somatorio1 ) ) )
+            {
+                std::cerr << "Scalar flux is nan or negative" << std::endl;
+                values->FLUXO_ESCALAR[g][n] = 0.0L;
+            }
+            else
+            {
+                //fluxo escalar nos nodos (não é o médio)
+                values->FLUXO_ESCALAR[g][n] = somatorio1;
             }
         }
     }
+
+    return maxError;
 }
 
-void DDMethod::updateAngularFluxMatrixRight()
+long double DDMethod::solveScalarFluxWithRelativeCriteria()
 {
+    long double somatorio1 = 0.0L;
+    long double maxError   = -1.0L;
+
     for (int g = 0; g < values->G; g++)
     {
-        for (int nodeIndex = 0; nodeIndex <= values->NODOSX; nodeIndex++)
+        for (int n = 0; n <= values->NODOSX; n++)
         {
-            // Atualização das direções de fluxo para a direita (mi > 0)
-            for (int o = 0; o < values->n / 2; o++) {  // Apenas metade das direções (mi > 0)
-                values->FLUXO_ANGULAR[g][nodeIndex][o] = values->FLUXO_ANGULAR_DIREITA[g][nodeIndex][o];
+            somatorio1 = 0.0L;
+
+            for (int o = 0; o < values->n; o++)
+            {
+                somatorio1 = somatorio1 + (values->FLUXO_ANGULAR[g][n][o]) * (values->w[o]);
+            }
+
+            somatorio1 = somatorio1 * 0.5L;
+
+            if (somatorio1 != 0)
+            {
+                values->MODULO = fabs((values->FLUXO_ESCALAR[g][n] - somatorio1) / somatorio1);
+            }
+            else
+            {
+                values->MODULO = fabs(values->FLUXO_ESCALAR[g][n] - somatorio1);
+            }
+
+            maxError = std::max(maxError, values->MODULO); //salva-se o maior erro entre os fluxos escalares
+
+            if (    ( somatorio1 < 0.0L)
+                 || ( std::isnan( somatorio1 ) ) )
+            {
+                std::cerr << "Scalar flux is nan or negative" << std::endl;
+                values->FLUXO_ESCALAR[g][n] = 0.0L;
+            }
+            else
+            {
+                //fluxo escalar nos nodos (não é o médio)
+                values->FLUXO_ESCALAR[g][n] = somatorio1;
             }
         }
     }
-}
 
+    return maxError;
+}
