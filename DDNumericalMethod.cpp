@@ -443,7 +443,6 @@ void DDMethod::rightScan()
                     fi  = num / den;
                     values->FLUXO_ANGULAR[g][ni + 1][o] = fi;
                 }
-                std::cout<<" noder "<<ni<<std::endl;
 
                 ni++;
             }
